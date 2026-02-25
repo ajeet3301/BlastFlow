@@ -1,15 +1,7 @@
 """
-╔══════════════════════════════════════════════════════════════════════════════╗
-║          BLAST BioSuite Pro  ·  Glassmorphism Edition                       ║
-║  Features: XML Parser · Online BLAST · Batch · LLM Explainer               ║
-║           Central Dogma · GC Dashboard · Phylo Viewer · Primer Designer    ║
-╚══════════════════════════════════════════════════════════════════════════════╝
-
-Run with:
-    streamlit run app.py
-
-Environment variable required for LLM features:
-    GROQ_API_KEY=<your_key>   or enter it directly in the sidebar.
+BLAST BioSuite Pro — Streamlit Bioinformatics App
+Run:  streamlit run app.py
+Requires: GROQ_API_KEY in .streamlit/secrets.toml
 """
 
 # ─── Standard Library ────────────────────────────────────────────────────────
@@ -645,7 +637,7 @@ def explain_blast_results(df: pd.DataFrame, api_key: str,
     """
     client = get_groq_client(api_key)
     if client is None:
-        return "❌ Could not initialise Groq client. Check your API key."
+        return "❌ AI client unavailable. Check secrets.toml."
 
     top5 = df.head(5)[
         ["Hit ID", "Hit Description", "Identity (%)", "E-Value",
@@ -695,7 +687,7 @@ def explain_blast_results(df: pd.DataFrame, api_key: str,
         )
         return completion.choices[0].message.content
     except Exception as e:
-        return f"❌ Groq API error: {e}"
+        return f"❌ AI error: {e}"
 
 
 def render_llm_explainer(df: pd.DataFrame, groq_key: str, section_key: str = ""):
@@ -705,10 +697,6 @@ def render_llm_explainer(df: pd.DataFrame, groq_key: str, section_key: str = "")
 
     st.markdown("---")
     st.markdown("### 🤖 AI Result Explainer")
-    st.markdown(
-        '<span class="badge badge-purple">Powered by Groq · LLaMA 3 70B</span>',
-        unsafe_allow_html=True,
-    )
 
     user_q = st.text_input(
         "Ask a follow-up question (optional)",
@@ -718,9 +706,9 @@ def render_llm_explainer(df: pd.DataFrame, groq_key: str, section_key: str = "")
 
     if st.button("✨  Explain these BLAST results", key=f"llm_btn_{section_key}"):
         if not groq_key.strip():
-            st.error("Please enter your Groq API key in the sidebar.")
+            st.error("AI key not found. Check your secrets.toml file.")
         else:
-            with st.spinner("🧠 Consulting LLaMA 3 70B via Groq…"):
+            with st.spinner("🧠 Thinking…"):
                 explanation = explain_blast_results(df, groq_key, user_q)
 
             with st.chat_message("assistant", avatar="🧬"):
@@ -1109,7 +1097,7 @@ with st.sidebar:
       </div>
       <div style="font-size:0.68rem; color:#4a8aaa; margin-top:3px;
                   font-family:'Space Grotesk',sans-serif;">
-        Biopython · Groq LLM · Glassmorphism
+        Biopython · AI · Bioinformatics Suite
       </div>
     </div>
     """, unsafe_allow_html=True)
@@ -1125,7 +1113,7 @@ with st.sidebar:
             "🌐  Online BLAST",
             "📦  Batch Processor",
             "── Analysis ──",
-            "🤖  LLM Explainer",
+            "🤖  AI Explainer",
             "🔀  Central Dogma",
             "📊  GC Dashboard",
             "🌿  Phylo Viewer",
@@ -1133,25 +1121,6 @@ with st.sidebar:
         ],
         label_visibility="collapsed",
     )
-
-    st.markdown("---")
-
-    # Groq API Key
-    st.markdown(
-        '<span style="font-size:0.78rem; color:#4a8aaa; font-weight:600;">'
-        'GROQ API KEY</span>',
-        unsafe_allow_html=True,
-    )
-    groq_key_input = st.text_input(
-        "Groq Key",
-        value=os.environ.get("GROQ_API_KEY", ""),
-        type="password",
-        placeholder="gsk_…",
-        label_visibility="collapsed",
-        help="Required for AI Explainer. Get a free key at console.groq.com",
-    )
-    # Store in session state so all pages can read it
-    st.session_state["groq_key"] = groq_key_input
 
     st.markdown("""
     <div style="font-size:0.72rem; color:#2a5a70; padding:10px 0; line-height:1.7;">
@@ -1165,7 +1134,11 @@ with st.sidebar:
 
 # Resolve page key (strip separators)
 _page = page.strip().lstrip("─ ").strip()
-GROQ_KEY = st.session_state.get("groq_key", "")
+# Read key from .streamlit/secrets.toml → [GROQ_API_KEY]
+try:
+    GROQ_KEY = st.secrets["GROQ_API_KEY"]
+except Exception:
+    GROQ_KEY = os.environ.get("GROQ_API_KEY", "")
 
 # ══════════════════════════════════════════════════════════════════════════════
 # PAGE: HOME
@@ -1195,8 +1168,8 @@ if _page == "🏠  Home":
          "Live qblast against NCBI nt / nr with cached results."),
         ("📦", "Batch Processor", "badge-blue",
          "Multi-file FASTA → sequential NCBI BLAST → combined ZIP download."),
-        ("🤖", "LLM Explainer",   "badge-purple",
-         "Groq + LLaMA 3 explains top hits in plain English."),
+        ("🤖", "AI Explainer",    "badge-purple",
+         "LLaMA 3 explains top hits in plain English with next-step advice."),
         ("🔀", "Central Dogma",   "badge-green",
          "DNA → Complement → mRNA → Protein with colored sequence display."),
         ("📊", "GC Dashboard",    "badge-green",
@@ -1223,10 +1196,7 @@ if _page == "🏠  Home":
             """, unsafe_allow_html=True)
         st.markdown("")
 
-    st.info(
-        "🔑 **Enter your Groq API key** in the sidebar to enable the AI Explainer. "
-        "Get a free key at [console.groq.com](https://console.groq.com)."
-    )
+    st.info("🤖 AI Explainer is ready — key loaded from secrets.toml.")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1445,24 +1415,20 @@ elif _page == "📦  Batch Processor":
 # PAGE: LLM EXPLAINER (standalone)
 # ══════════════════════════════════════════════════════════════════════════════
 
-elif _page == "🤖  LLM Explainer":
-    st.title("AI BLAST Result Explainer")
-    st.markdown(
-        "Upload a BLAST XML file and let **LLaMA 3 70B via Groq** explain "
-        "the top hits in plain English — with contamination flags, "
-        "significance interpretation, and next-step recommendations."
-    )
+elif _page == "🤖  AI Explainer":
+    st.title("AI BLAST Explainer")
+    st.markdown("Upload a BLAST XML — the AI reads the top hits and explains them in plain English.")
 
     if not GROQ_AVAILABLE:
-        st.error("Install the Groq SDK: `pip install groq`")
+        st.error("Install the AI SDK: `pip install groq`")
         st.stop()
 
     if not GROQ_KEY.strip():
-        st.warning("🔑 Please enter your **Groq API key** in the sidebar.")
+        st.warning("⚠️ AI key not found. Add `GROQ_API_KEY` to `.streamlit/secrets.toml`.")
 
     st.markdown("---")
 
-    uploaded = st.file_uploader("Upload BLAST XML for AI analysis", type=["xml"])
+    uploaded = st.file_uploader("Upload BLAST XML", type=["xml"])
     if uploaded:
         check_biopython()
         with st.spinner("Parsing XML…"):
@@ -1471,9 +1437,9 @@ elif _page == "🤖  LLM Explainer":
         if df.empty:
             st.error("No hits found in the uploaded file.")
         else:
-            st.success(f"✅ **{len(df):,}** HSPs loaded. Top 5 will be sent to the LLM.")
+            st.success(f"✅ **{len(df):,}** HSPs loaded.")
 
-            st.markdown("#### Top 5 Hits Preview")
+            st.markdown("#### Top 5 Hits")
             st.dataframe(
                 df.head(5)[["Hit ID","Hit Description","Identity (%)","E-Value","Bit Score"]],
                 use_container_width=True,
@@ -1481,12 +1447,9 @@ elif _page == "🤖  LLM Explainer":
 
             render_llm_explainer(df, GROQ_KEY, section_key="standalone")
 
-    # Chat-style interface for follow-up
+    # Chat interface
     st.markdown("---")
-    st.markdown("### 💬 Ask a Bioinformatics Question")
-    st.markdown(
-        "You can also chat directly with the AI about any bioinformatics concept."
-    )
+    st.markdown("### 💬 Ask a Question")
 
     if "chat_history" not in st.session_state:
         st.session_state["chat_history"] = []
@@ -1502,7 +1465,7 @@ elif _page == "🤖  LLM Explainer":
 
         if not GROQ_KEY.strip():
             with st.chat_message("assistant", avatar="🧬"):
-                st.warning("Please enter your Groq API key in the sidebar.")
+                st.warning("AI key not found. Check secrets.toml.")
         else:
             with st.chat_message("assistant", avatar="🧬"):
                 with st.spinner("Thinking…"):
@@ -1521,9 +1484,9 @@ elif _page == "🤖  LLM Explainer":
                             )
                             answer = resp.choices[0].message.content
                         except Exception as e:
-                            answer = f"❌ Groq error: {e}"
+                            answer = f"❌ AI error: {e}"
                     else:
-                        answer = "❌ Could not connect to Groq."
+                        answer = "❌ AI unavailable."
 
                     st.markdown(answer)
                     st.session_state["chat_history"].append(
