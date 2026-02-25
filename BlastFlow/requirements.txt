@@ -1,0 +1,28 @@
+# ─────────────────────────────────────────────────────────
+# BLAST BioSuite Pro — Python Dependencies
+# Install: pip install -r requirements.txt
+# Python >= 3.10 required (for type hint list[dict] syntax)
+# ─────────────────────────────────────────────────────────
+
+# ── Web Framework ─────────────────────────────────────────
+streamlit>=1.35.0
+
+# ── Bioinformatics Core ───────────────────────────────────
+biopython>=1.83
+
+# ── Data Handling ─────────────────────────────────────────
+pandas>=2.2.0
+numpy>=1.26.0
+
+# ── Interactive Visualization ─────────────────────────────
+plotly>=5.22.0
+
+# ── Static Charts (phylo tree, fallback) ─────────────────
+matplotlib>=3.9.0
+seaborn>=0.13.0
+
+# ── LLM / AI Explainer ────────────────────────────────────
+groq>=0.9.0          # Groq SDK for LLaMA 3 inference
+
+# ── Utilities ─────────────────────────────────────────────
+# (all others are Python stdlib: io, os, re, zipfile, etc.)
