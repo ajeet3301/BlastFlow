@@ -63,147 +63,217 @@ except Exception:
     GROQ_KEY = os.environ.get("GROQ_API_KEY", "")
 
 # ══════════════════════════════════════════════════════════════════════════════
-# CSS — Light Glassmorphism
+# CSS — Dark Futuristic Glassmorphism
 # ══════════════════════════════════════════════════════════════════════════════
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root {
-  --glass:  rgba(255,255,255,0.72);
-  --glass2: rgba(255,255,255,0.88);
-  --border: rgba(150,160,210,0.25);
-  --border-h:rgba(120,130,200,0.45);
-  --shadow: rgba(100,110,180,0.12);
-  --sh2:    rgba(100,110,180,0.22);
-  --text:   #1e1f3a;
-  --muted:  #7879a0;
-  --font:   'Inter', sans-serif;
-  --mono:   'JetBrains Mono', monospace;
-
-  --violet:#7c3aed; --vl:#ede9fe; --vt:rgba(124,58,237,0.12); --vh:rgba(124,58,237,0.25);
-  --sky:   #0284c7; --sl:#e0f2fe; --st:rgba(2,132,199,0.12);  --sh:rgba(2,132,199,0.25);
-  --teal:  #0d9488; --tl:#ccfbf1; --tt:rgba(13,148,136,0.12); --th:rgba(13,148,136,0.25);
-  --amber: #d97706; --al:#fef3c7; --at:rgba(217,119,6,0.12);  --ah:rgba(217,119,6,0.25);
-  --pink:  #be185d; --pl:#fce7f3; --pt:rgba(190,24,93,0.12);  --ph:rgba(190,24,93,0.25);
-  --green: #15803d; --gl:#dcfce7; --gt:rgba(21,128,61,0.12);  --gh:rgba(21,128,61,0.25);
-  --orange:#c2410c; --ol:#ffedd5; --ot:rgba(194,65,12,0.12);  --oh:rgba(194,65,12,0.25);
-  --blue:  #1d4ed8; --bl:#dbeafe; --bt:rgba(29,78,216,0.12);  --bh:rgba(29,78,216,0.25);
-  --rose:  #e11d48; --rl:#ffe4e6; --rt:rgba(225,29,72,0.12);  --rh:rgba(225,29,72,0.25);
+  --bg:      #0b0f19;
+  --bg2:     #121826;
+  --pa:      #7c9cff;
+  --sa:      #00e0ff;
+  --tm:      #e6ecff;
+  --tf:      #9aa4c7;
+  --bd:      rgba(255,255,255,0.08);
+  --bh:      rgba(255,255,255,0.16);
+  --glass:   rgba(18,24,38,0.72);
+  --glass2:  rgba(18,24,38,0.88);
+  --glow-p:  rgba(124,156,255,0.18);
+  --glow-s:  rgba(0,224,255,0.14);
+  --font:    'Inter', sans-serif;
+  --mono:    'JetBrains Mono', monospace;
 }
 
 [data-testid="stSidebar"],[data-testid="collapsedControl"]{display:none!important;}
-.main .block-container{max-width:1200px;padding:2rem 2.5rem 4rem;position:relative;z-index:1;}
+.main .block-container{max-width:1220px;padding:2rem 2.5rem 5rem;position:relative;z-index:1;}
 
-html,body,[class*="css"],.stApp{font-family:var(--font)!important;color:var(--text)!important;}
-.stApp{background:linear-gradient(135deg,#f0f4ff 0%,#f5f0ff 35%,#f0f7ff 65%,#f0fffa 100%)!important;}
-.stApp::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
-  background:radial-gradient(ellipse 60% 50% at 15% 20%,rgba(124,58,237,.06) 0%,transparent 100%),
-             radial-gradient(ellipse 50% 40% at 85% 70%,rgba(2,132,199,.07) 0%,transparent 100%),
-             radial-gradient(ellipse 40% 35% at 50% 90%,rgba(13,148,136,.05) 0%,transparent 100%);}
+html,body,[class*="css"],.stApp{font-family:var(--font)!important;color:var(--tm)!important;}
+.stApp{background:var(--bg)!important;}
 
-.gc{background:var(--glass);backdrop-filter:blur(18px) saturate(160%);border:1px solid var(--border);
-    border-radius:18px;padding:22px 24px;margin-bottom:14px;
-    box-shadow:0 2px 16px var(--shadow),inset 0 1px 0 rgba(255,255,255,.8);transition:all .22s ease;}
-.gc:hover{background:var(--glass2);border-color:var(--border-h);
-    box-shadow:0 6px 28px var(--sh2),inset 0 1px 0 rgba(255,255,255,.9);transform:translateY(-2px);}
-.gc-sm{background:var(--glass);backdrop-filter:blur(14px);border:1px solid var(--border);
-    border-radius:12px;padding:14px 18px;box-shadow:0 2px 10px var(--shadow);}
+/* Ambient glow orbs */
+.stApp::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(ellipse 55% 45% at 12% 15%, rgba(124,156,255,.07) 0%, transparent 70%),
+    radial-gradient(ellipse 45% 38% at 88% 75%, rgba(0,224,255,.06) 0%, transparent 70%),
+    radial-gradient(ellipse 35% 30% at 55% 95%, rgba(124,156,255,.04) 0%, transparent 70%);}
 
-h1{font-family:var(--font)!important;font-size:2rem!important;font-weight:700!important;
-   color:var(--text)!important;letter-spacing:-.5px!important;}
-h2{color:var(--violet)!important;font-weight:600!important;font-size:1.2rem!important;}
-h3{color:var(--sky)!important;font-weight:600!important;font-size:1rem!important;}
-code,pre{font-family:var(--mono)!important;background:var(--vl)!important;
-    border:1px solid var(--vh)!important;color:var(--violet)!important;border-radius:5px;font-size:.82rem!important;}
+/* ── Glass cards ── */
+.gc{
+  background:var(--glass);
+  backdrop-filter:blur(20px) saturate(140%);
+  -webkit-backdrop-filter:blur(20px) saturate(140%);
+  border:1px solid var(--bd);
+  border-radius:16px;padding:22px 24px;margin-bottom:14px;
+  box-shadow:0 4px 24px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.04);
+  transition:border-color .22s ease,box-shadow .22s ease,transform .22s ease;}
+.gc:hover{
+  border-color:var(--bh);
+  box-shadow:0 8px 40px rgba(0,0,0,.5),0 0 20px var(--glow-p),inset 0 1px 0 rgba(255,255,255,.06);
+  transform:translateY(-2px);}
+.gc-sm{
+  background:rgba(18,24,38,.6);
+  backdrop-filter:blur(14px);border:1px solid var(--bd);
+  border-radius:12px;padding:14px 18px;
+  box-shadow:0 2px 12px rgba(0,0,0,.3);}
 
-[data-testid="metric-container"]{background:var(--glass)!important;border:1px solid var(--border)!important;
-    border-radius:14px!important;padding:14px 18px!important;box-shadow:0 2px 12px var(--shadow)!important;}
-[data-testid="stMetricValue"]{font-family:var(--mono)!important;color:var(--violet)!important;font-size:1.45rem!important;}
-[data-testid="stMetricLabel"]{color:var(--muted)!important;font-size:.78rem!important;}
+/* ── Typography ── */
+h1{font-family:var(--font)!important;font-size:1.95rem!important;font-weight:700!important;
+   color:var(--tm)!important;letter-spacing:-.4px!important;line-height:1.2!important;}
+h2{color:var(--pa)!important;font-weight:600!important;font-size:1.15rem!important;}
+h3{color:var(--sa)!important;font-weight:600!important;font-size:1rem!important;}
+p,li,span,label{color:var(--tm)!important;}
+code,pre{
+  font-family:var(--mono)!important;
+  background:rgba(124,156,255,.1)!important;
+  border:1px solid rgba(124,156,255,.2)!important;
+  color:var(--pa)!important;border-radius:6px;font-size:.82rem!important;}
 
-.stButton>button{background:var(--violet)!important;color:#fff!important;border:none!important;
-    border-radius:10px!important;font-family:var(--font)!important;font-weight:600!important;
-    font-size:.88rem!important;padding:.5rem 1.3rem!important;
-    box-shadow:0 2px 12px rgba(124,58,237,.3)!important;transition:all .18s!important;}
-.stButton>button:hover{background:#6d28d9!important;box-shadow:0 4px 20px rgba(124,58,237,.45)!important;transform:translateY(-1px)!important;}
-[data-testid="stDownloadButton"]>button{background:var(--teal)!important;box-shadow:0 2px 12px rgba(13,148,136,.25)!important;}
-[data-testid="stDownloadButton"]>button:hover{background:#0f766e!important;box-shadow:0 4px 20px rgba(13,148,136,.4)!important;}
+/* ── Metric cards ── */
+[data-testid="metric-container"]{
+  background:var(--glass)!important;border:1px solid var(--bd)!important;
+  border-radius:14px!important;padding:14px 18px!important;
+  box-shadow:0 2px 16px rgba(0,0,0,.35)!important;transition:border-color .2s!important;}
+[data-testid="metric-container"]:hover{border-color:var(--bh)!important;}
+[data-testid="stMetricValue"]{font-family:var(--mono)!important;color:var(--pa)!important;font-size:1.45rem!important;}
+[data-testid="stMetricLabel"]{color:var(--tf)!important;font-size:.78rem!important;}
 
-.stTextArea textarea,.stTextInput input{background:rgba(255,255,255,.85)!important;
-    border:1.5px solid var(--border)!important;border-radius:10px!important;
-    color:var(--text)!important;font-family:var(--font)!important;
-    box-shadow:inset 0 2px 4px rgba(100,110,180,.06)!important;transition:border-color .18s,box-shadow .18s!important;}
-.stTextArea textarea:focus,.stTextInput input:focus{border-color:var(--violet)!important;
-    box-shadow:0 0 0 3px rgba(124,58,237,.12)!important;}
-.stSelectbox>div>div{background:rgba(255,255,255,.85)!important;
-    border:1.5px solid var(--border)!important;border-radius:10px!important;color:var(--text)!important;}
+/* ── Buttons ── */
+.stButton>button{
+  background:linear-gradient(135deg,rgba(124,156,255,.18),rgba(0,224,255,.12))!important;
+  color:var(--pa)!important;
+  border:1px solid rgba(124,156,255,.35)!important;
+  border-radius:10px!important;font-family:var(--font)!important;font-weight:600!important;
+  font-size:.88rem!important;padding:.48rem 1.3rem!important;
+  backdrop-filter:blur(8px)!important;
+  transition:all .18s!important;}
+.stButton>button:hover{
+  background:linear-gradient(135deg,rgba(124,156,255,.3),rgba(0,224,255,.2))!important;
+  border-color:var(--pa)!important;color:#fff!important;
+  box-shadow:0 0 24px rgba(124,156,255,.35)!important;
+  transform:translateY(-1px)!important;}
+[data-testid="stDownloadButton"]>button{
+  background:linear-gradient(135deg,rgba(0,224,255,.15),rgba(124,156,255,.1))!important;
+  color:var(--sa)!important;border-color:rgba(0,224,255,.3)!important;}
+[data-testid="stDownloadButton"]>button:hover{
+  background:linear-gradient(135deg,rgba(0,224,255,.28),rgba(124,156,255,.18))!important;
+  border-color:var(--sa)!important;color:#fff!important;
+  box-shadow:0 0 24px rgba(0,224,255,.3)!important;}
 
-[data-testid="stFileUploader"]{background:rgba(255,255,255,.6)!important;
-    border:2px dashed rgba(124,58,237,.3)!important;border-radius:14px!important;transition:all .2s;}
-[data-testid="stFileUploader"]:hover{background:rgba(255,255,255,.82)!important;border-color:var(--violet)!important;}
+/* ── Inputs ── */
+.stTextArea textarea,.stTextInput input{
+  background:rgba(18,24,38,.85)!important;
+  border:1px solid var(--bd)!important;border-radius:10px!important;
+  color:var(--tm)!important;font-family:var(--font)!important;
+  transition:border-color .18s,box-shadow .18s!important;}
+.stTextArea textarea:focus,.stTextInput input:focus{
+  border-color:rgba(124,156,255,.5)!important;
+  box-shadow:0 0 0 3px rgba(124,156,255,.1)!important;}
+.stSelectbox>div>div{
+  background:rgba(18,24,38,.85)!important;
+  border:1px solid var(--bd)!important;border-radius:10px!important;color:var(--tm)!important;}
 
-.stTabs [data-baseweb="tab-list"]{background:rgba(255,255,255,.55)!important;
-    border-radius:12px 12px 0 0!important;border-bottom:1px solid var(--border)!important;
-    gap:2px!important;padding:5px 5px 0!important;backdrop-filter:blur(10px)!important;}
-.stTabs [data-baseweb="tab"]{background:transparent!important;border-radius:8px 8px 0 0!important;
-    color:var(--muted)!important;font-family:var(--font)!important;font-weight:500!important;font-size:.85rem!important;}
-.stTabs [data-baseweb="tab"]:hover{color:var(--violet)!important;}
-.stTabs [aria-selected="true"]{background:rgba(124,58,237,.1)!important;color:var(--violet)!important;font-weight:600!important;}
-.stTabs [data-baseweb="tab-panel"]{background:rgba(255,255,255,.55)!important;
-    backdrop-filter:blur(10px)!important;border:1px solid var(--border)!important;
-    border-top:none!important;border-radius:0 0 12px 12px!important;padding:20px!important;}
+/* ── File uploader ── */
+[data-testid="stFileUploader"]{
+  background:rgba(18,24,38,.5)!important;
+  border:2px dashed rgba(124,156,255,.2)!important;
+  border-radius:14px!important;transition:all .2s;}
+[data-testid="stFileUploader"]:hover{
+  background:rgba(124,156,255,.05)!important;
+  border-color:rgba(124,156,255,.4)!important;}
 
-[data-testid="stDataFrame"]{background:rgba(255,255,255,.7)!important;
-    border:1px solid var(--border)!important;border-radius:12px!important;
-    overflow:hidden!important;box-shadow:0 2px 10px var(--shadow)!important;}
+/* ── Tabs ── */
+.stTabs [data-baseweb="tab-list"]{
+  background:rgba(18,24,38,.7)!important;
+  border-radius:12px 12px 0 0!important;border-bottom:1px solid var(--bd)!important;
+  gap:2px!important;padding:4px 4px 0!important;backdrop-filter:blur(12px)!important;}
+.stTabs [data-baseweb="tab"]{
+  background:transparent!important;border-radius:8px 8px 0 0!important;
+  color:var(--tf)!important;font-family:var(--font)!important;
+  font-weight:500!important;font-size:.85rem!important;transition:color .15s!important;}
+.stTabs [data-baseweb="tab"]:hover{color:var(--pa)!important;}
+.stTabs [aria-selected="true"]{
+  background:rgba(124,156,255,.12)!important;color:var(--pa)!important;font-weight:600!important;}
+.stTabs [data-baseweb="tab-panel"]{
+  background:rgba(18,24,38,.55)!important;backdrop-filter:blur(12px)!important;
+  border:1px solid var(--bd)!important;border-top:none!important;
+  border-radius:0 0 12px 12px!important;padding:20px!important;}
+
+/* ── DataFrame ── */
+[data-testid="stDataFrame"]{
+  background:rgba(18,24,38,.7)!important;border:1px solid var(--bd)!important;
+  border-radius:12px!important;overflow:hidden!important;
+  box-shadow:0 2px 16px rgba(0,0,0,.4)!important;}
+
+/* ── Misc ── */
 .stAlert{border-radius:12px!important;border-left-width:3px!important;}
-[data-testid="stExpander"]{background:rgba(255,255,255,.6)!important;
-    border:1px solid var(--border)!important;border-radius:12px!important;overflow:hidden;}
-.stProgress>div>div{background:linear-gradient(90deg,var(--violet),var(--sky))!important;border-radius:99px!important;}
-.stProgress{background:rgba(124,58,237,.1)!important;border-radius:99px!important;}
-hr{border:none!important;border-top:1px solid var(--border)!important;margin:1.2rem 0!important;}
-[data-testid="stChatMessage"]{background:rgba(255,255,255,.75)!important;
-    border:1px solid var(--border)!important;border-radius:14px!important;
-    margin-bottom:8px!important;box-shadow:0 2px 10px var(--shadow)!important;}
-.stSlider [data-testid="stTickBarMin"],.stSlider [data-testid="stTickBarMax"]{color:var(--muted)!important;}
+[data-testid="stExpander"]{
+  background:rgba(18,24,38,.55)!important;border:1px solid var(--bd)!important;
+  border-radius:12px!important;overflow:hidden;}
+.stProgress>div>div{
+  background:linear-gradient(90deg,var(--pa),var(--sa))!important;border-radius:99px!important;}
+.stProgress{background:rgba(124,156,255,.1)!important;border-radius:99px!important;}
+hr{border:none!important;border-top:1px solid var(--bd)!important;margin:1.2rem 0!important;}
+[data-testid="stChatMessage"]{
+  background:var(--glass)!important;border:1px solid var(--bd)!important;
+  border-radius:14px!important;margin-bottom:8px!important;
+  box-shadow:0 2px 14px rgba(0,0,0,.35)!important;}
+.stSlider [data-testid="stTickBarMin"],
+.stSlider [data-testid="stTickBarMax"]{color:var(--tf)!important;}
 
-.seq-block{font-family:var(--mono);font-size:.82rem;background:rgba(255,255,255,.9);
-    border:1px solid var(--border);border-radius:10px;padding:14px 18px;
-    line-height:1.9;overflow-x:auto;letter-spacing:.05em;word-break:break-all;
-    box-shadow:inset 0 2px 6px rgba(100,110,180,.07);}
-.nuc-A{color:#dc2626;font-weight:600;} .nuc-T{color:#2563eb;font-weight:600;}
-.nuc-G{color:#16a34a;font-weight:600;} .nuc-C{color:#d97706;font-weight:600;}
-.nuc-U{color:#ea580c;font-weight:600;}
+/* ── Sequence block ── */
+.seq-block{
+  font-family:var(--mono);font-size:.82rem;
+  background:rgba(11,15,25,.9);
+  border:1px solid var(--bd);border-radius:10px;
+  padding:14px 18px;line-height:1.9;overflow-x:auto;
+  letter-spacing:.05em;word-break:break-all;}
+.nuc-A{color:#ff6b6b;font-weight:600;}
+.nuc-T{color:#7c9cff;font-weight:600;}
+.nuc-G{color:#00e0ff;font-weight:600;}
+.nuc-C{color:#ffd166;font-weight:600;}
+.nuc-U{color:#ff9f43;font-weight:600;}
 
+/* ── Badges ── */
 .badge{display:inline-block;padding:2px 10px;border-radius:99px;
-    font-size:.69rem;font-weight:600;letter-spacing:.3px;text-transform:uppercase;}
-.bv{background:var(--vl);color:var(--violet);border:1px solid var(--vh);}
-.bs{background:var(--sl);color:var(--sky);border:1px solid var(--sh);}
-.bt{background:var(--tl);color:var(--teal);border:1px solid var(--th);}
-.ba{background:var(--al);color:var(--amber);border:1px solid var(--ah);}
-.bp{background:var(--pl);color:var(--pink);border:1px solid var(--ph);}
-.bg{background:var(--gl);color:var(--green);border:1px solid var(--gh);}
-.bo{background:var(--ol);color:var(--orange);border:1px solid var(--oh);}
-.bb{background:var(--bl);color:var(--blue);border:1px solid var(--bh);}
-.br{background:var(--rl);color:var(--rose);border:1px solid var(--rh);}
+    font-size:.68rem;font-weight:600;letter-spacing:.4px;text-transform:uppercase;}
+.bv{background:rgba(124,156,255,.12);color:var(--pa);border:1px solid rgba(124,156,255,.25);}
+.bs{background:rgba(0,224,255,.1);color:var(--sa);border:1px solid rgba(0,224,255,.22);}
+.bt{background:rgba(0,224,255,.08);color:#67e8f9;border:1px solid rgba(103,232,249,.2);}
+.ba{background:rgba(255,209,102,.1);color:#ffd166;border:1px solid rgba(255,209,102,.22);}
+.bp{background:rgba(255,107,107,.1);color:#ff6b6b;border:1px solid rgba(255,107,107,.22);}
+.bg{background:rgba(52,211,153,.1);color:#34d399;border:1px solid rgba(52,211,153,.22);}
+.bo{background:rgba(255,159,67,.1);color:#ff9f43;border:1px solid rgba(255,159,67,.22);}
+.bb{background:rgba(124,156,255,.08);color:#93c5fd;border:1px solid rgba(147,197,253,.2);}
+.br{background:rgba(255,107,107,.12);color:#fca5a5;border:1px solid rgba(252,165,165,.2);}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:var(--bg2);}
+::-webkit-scrollbar-thumb{background:rgba(124,156,255,.25);border-radius:99px;}
+::-webkit-scrollbar-thumb:hover{background:rgba(124,156,255,.45);}
 </style>
 """, unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
-# PLOTLY LIGHT THEME
+# PLOTLY DARK THEME
 # ══════════════════════════════════════════════════════════════════════════════
 PLY = dict(
-    paper_bgcolor="rgba(255,255,255,0)",plot_bgcolor="rgba(248,249,255,.5)",
-    font=dict(family="Inter,sans-serif",color="#1e1f3a",size=12),
-    title_font=dict(family="Inter,sans-serif",color="#7c3aed",size=14),
-    legend=dict(bgcolor="rgba(255,255,255,.8)",bordercolor="rgba(150,160,210,.25)",borderwidth=1),
-    coloraxis_colorbar=dict(bgcolor="rgba(255,255,255,.8)",bordercolor="rgba(150,160,210,.25)",
-        tickfont=dict(color="#7879a0"),title_font=dict(color="#7879a0")),
+    paper_bgcolor="rgba(11,15,25,0)",
+    plot_bgcolor="rgba(18,24,38,0.5)",
+    font=dict(family="Inter,sans-serif", color="#e6ecff", size=12),
+    title_font=dict(family="Inter,sans-serif", color="#7c9cff", size=14),
+    legend=dict(bgcolor="rgba(18,24,38,0.85)", bordercolor="rgba(255,255,255,0.08)", borderwidth=1),
+    coloraxis_colorbar=dict(
+        bgcolor="rgba(18,24,38,0.85)", bordercolor="rgba(255,255,255,0.08)",
+        tickfont=dict(color="#9aa4c7"), title_font=dict(color="#9aa4c7"),
+    ),
 )
-GRID = dict(gridcolor="rgba(150,160,210,.12)",zerolinecolor="rgba(150,160,210,.25)")
-GV = ["#ede9fe","#c4b5fd","#a78bfa","#7c3aed","#5b21b6"]
-GM = ["#7c3aed","#0284c7","#0d9488","#d97706","#be185d","#e11d48"]
+GRID = dict(gridcolor="rgba(255,255,255,0.05)", zerolinecolor="rgba(255,255,255,0.08)")
+GV   = ["#1a1f3a","#2d3a7a","#5472d4","#7c9cff","#00e0ff"]
+GM   = ["#7c9cff","#00e0ff","#34d399","#ffd166","#ff6b6b","#ff9f43"]
 
 def th(fig):
     fig.update_layout(**PLY); fig.update_xaxes(**GRID); fig.update_yaxes(**GRID)
@@ -233,25 +303,28 @@ def seq_block(seq,label,badge="bv"):
 TABLES = {"Standard (1)":1,"Mitochondrial (2)":2,"Bacterial (11)":11}
 
 ACCENT = {
-    "violet":("#7c3aed","#ede9fe","rgba(124,58,237,.12)","rgba(124,58,237,.25)"),
-    "sky":   ("#0284c7","#e0f2fe","rgba(2,132,199,.12)","rgba(2,132,199,.25)"),
-    "teal":  ("#0d9488","#ccfbf1","rgba(13,148,136,.12)","rgba(13,148,136,.25)"),
-    "amber": ("#d97706","#fef3c7","rgba(217,119,6,.12)","rgba(217,119,6,.25)"),
-    "pink":  ("#be185d","#fce7f3","rgba(190,24,93,.12)","rgba(190,24,93,.25)"),
-    "green": ("#15803d","#dcfce7","rgba(21,128,61,.12)","rgba(21,128,61,.25)"),
-    "orange":("#c2410c","#ffedd5","rgba(194,65,12,.12)","rgba(194,65,12,.25)"),
-    "blue":  ("#1d4ed8","#dbeafe","rgba(29,78,216,.12)","rgba(29,78,216,.25)"),
-    "rose":  ("#e11d48","#ffe4e6","rgba(225,29,72,.12)","rgba(225,29,72,.25)"),
+    # (text-color, icon-bg, border-rgba, border-hover-rgba)
+    "violet": ("#7c9cff", "rgba(124,156,255,.12)", "rgba(124,156,255,.2)",  "rgba(124,156,255,.4)"),
+    "sky":    ("#00e0ff", "rgba(0,224,255,.1)",     "rgba(0,224,255,.18)",   "rgba(0,224,255,.38)"),
+    "teal":   ("#67e8f9", "rgba(103,232,249,.1)",   "rgba(103,232,249,.18)","rgba(103,232,249,.35)"),
+    "amber":  ("#ffd166", "rgba(255,209,102,.1)",   "rgba(255,209,102,.18)","rgba(255,209,102,.35)"),
+    "pink":   ("#ff6b6b", "rgba(255,107,107,.1)",   "rgba(255,107,107,.18)","rgba(255,107,107,.35)"),
+    "green":  ("#34d399", "rgba(52,211,153,.1)",    "rgba(52,211,153,.18)", "rgba(52,211,153,.35)"),
+    "orange": ("#ff9f43", "rgba(255,159,67,.1)",    "rgba(255,159,67,.18)", "rgba(255,159,67,.35)"),
+    "blue":   ("#93c5fd", "rgba(147,197,253,.1)",   "rgba(147,197,253,.18)","rgba(147,197,253,.35)"),
+    "rose":   ("#fca5a5", "rgba(252,165,165,.1)",   "rgba(252,165,165,.18)","rgba(252,165,165,.35)"),
 }
 
 def page_header(icon,title,accent="violet"):
     ct,cbg,cb,_ = ACCENT[accent]
     if st.button("← Home",key="bk"): go("home")
     st.markdown(f"""
-    <div style="display:flex;align-items:center;gap:14px;margin:8px 0 20px;">
-      <div style="width:48px;height:48px;border-radius:14px;background:{cbg};border:1px solid {cb};
-                  display:flex;align-items:center;justify-content:center;font-size:1.5rem;">{icon}</div>
-      <h1 style="margin:0;font-size:1.75rem!important;">{title}</h1>
+    <div style="display:flex;align-items:center;gap:14px;margin:8px 0 22px;">
+      <div style="width:48px;height:48px;border-radius:14px;background:{cbg};
+                  border:1px solid {cb};display:flex;align-items:center;
+                  justify-content:center;font-size:1.5rem;
+                  box-shadow:0 0 20px {cb};">{icon}</div>
+      <h1 style="margin:0;font-size:1.75rem!important;color:#e6ecff!important;">{title}</h1>
     </div>""",unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -378,9 +451,9 @@ def render_seq_analysis(info:dict):
             skews.append((g-c)/d if d else 0); pos.append(i+w//2)
         fs=px.area(x=pos,y=skews,title="GC Skew [(G−C)/(G+C)]",
                    labels={"x":"Position (bp)","y":"GC Skew"},height=260,
-                   color_discrete_sequence=["#7c3aed"])
-        fs.add_hline(y=0,line_dash="dot",line_color="rgba(124,58,237,.4)")
-        fs.update_traces(line=dict(width=1.8),fillcolor="rgba(124,58,237,.08)")
+                   color_discrete_sequence=["#7c9cff"])
+        fs.add_hline(y=0,line_dash="dot",line_color="rgba(124,156,255,.4)")
+        fs.update_traces(line=dict(width=1.8),fillcolor="rgba(124,156,255,.08)")
         st.plotly_chart(th(fs),use_container_width=True)
 
     # Coloured sequence preview
@@ -461,7 +534,7 @@ def blast_charts(df:pd.DataFrame):
         c1,c2=st.columns(2)
         with c1:
             f3=px.histogram(df[df["E-Value"]>0],x="E-Value",nbins=35,log_x=True,
-                            color_discrete_sequence=["#7c3aed"],
+                            color_discrete_sequence=["#7c9cff"],
                             title="E-Value Distribution",height=300)
             f3.update_layout(bargap=.06)
             st.plotly_chart(th(f3),use_container_width=True)
@@ -489,7 +562,7 @@ def render_dot_plot(s1:str,s2:str,k:int=6):
             xs.append(kmers[mer]); ys.append(j)
     if not xs: st.warning("No matching k-mers found. Try a smaller word size."); return
     fig=px.scatter(x=xs,y=ys,opacity=.4,
-                   color_discrete_sequence=["#7c3aed"],
+                   color_discrete_sequence=["#7c9cff"],
                    labels={"x":"Sequence 1 position","y":"Sequence 2 position"},
                    title=f"Dot Plot (k={k})",height=420)
     fig.update_traces(marker=dict(size=3))
@@ -565,18 +638,19 @@ def protein_3d_viewer(pdb_id:str):
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script src="https://3Dmol.csb.pitt.edu/build/3Dmol-min.js"></script>
     <style>
-      body{{margin:0;background:linear-gradient(135deg,#f0f4ff,#f5f0ff);}}
+      body{{margin:0;background:#0b0f19;}}
       #viewer{{width:100%;height:480px;position:relative;border-radius:16px;overflow:hidden;
-               box-shadow:0 4px 24px rgba(124,58,237,.18);}}
+               box-shadow:0 4px 32px rgba(0,0,0,.6),0 0 40px rgba(124,156,255,.08);}}
       .ctrl{{position:absolute;top:12px;right:12px;z-index:10;display:flex;gap:6px;flex-wrap:wrap;}}
-      .btn{{background:rgba(255,255,255,.85);border:1px solid rgba(124,58,237,.25);
+      .btn{{background:rgba(18,24,38,.85);border:1px solid rgba(124,156,255,.25);
             border-radius:8px;padding:5px 12px;font-family:Inter,sans-serif;font-size:12px;
-            font-weight:600;color:#7c3aed;cursor:pointer;backdrop-filter:blur(8px);}}
-      .btn:hover{{background:rgba(124,58,237,.1);}}
-      .label{{position:absolute;bottom:12px;left:12px;background:rgba(255,255,255,.82);
-              backdrop-filter:blur(8px);border-radius:10px;padding:6px 14px;
-              font-family:Inter,sans-serif;font-size:13px;font-weight:600;color:#1e1f3a;
-              border:1px solid rgba(124,58,237,.2);}}
+            font-weight:600;color:#7c9cff;cursor:pointer;backdrop-filter:blur(10px);
+            transition:all .15s;}}
+      .btn:hover{{background:rgba(124,156,255,.15);border-color:rgba(124,156,255,.5);color:#e6ecff;}}
+      .label{{position:absolute;bottom:12px;left:12px;background:rgba(18,24,38,.85);
+              backdrop-filter:blur(10px);border-radius:10px;padding:6px 14px;
+              font-family:Inter,sans-serif;font-size:13px;font-weight:600;color:#e6ecff;
+              border:1px solid rgba(255,255,255,.08);}}
     </style></head><body>
     <div style="position:relative;">
       <div id="viewer"></div>
@@ -592,7 +666,7 @@ def protein_3d_viewer(pdb_id:str):
     </div>
     <script>
     let viewer=$3Dmol.createViewer(document.getElementById("viewer"),
-        {{backgroundColor:"rgba(240,244,255,0.6)"}});
+        {{backgroundColor:"#0b0f19"}});
     $3Dmol.download("pdb:{pid}",viewer,{{}},function(){{
         viewer.setStyle({{}},{{cartoon:{{colorscheme:"ssJmol"}}}});
         viewer.zoomTo(); viewer.render();
@@ -604,7 +678,7 @@ def protein_3d_viewer(pdb_id:str):
         else if(s==="sphere") viewer.setStyle({{}},{{sphere:{{colorscheme:"rasmol",radius:.8}}}});
         else if(s==="surface"){{
             viewer.setStyle({{}},{{cartoon:{{colorscheme:"ssJmol"}}}});
-            viewer.addSurface($3Dmol.SurfaceType.VDW,{{opacity:.6,colorscheme:"whiteCarbon"}});
+            viewer.addSurface($3Dmol.SurfaceType.VDW,{{opacity:.55,colorscheme:"whiteCarbon"}});
         }}
         viewer.render();
     }}
@@ -680,9 +754,9 @@ def gc_charts(p):
                 skews.append((g-c)/d if d else 0); pos.append(i+w//2)
             fs=px.area(x=pos,y=skews,title="GC Skew",
                        labels={"x":"Position","y":"(G-C)/(G+C)"},height=340,
-                       color_discrete_sequence=["#7c3aed"])
-            fs.add_hline(y=0,line_dash="dot",line_color="rgba(124,58,237,.4)")
-            fs.update_traces(line=dict(width=1.8),fillcolor="rgba(124,58,237,.08)")
+                       color_discrete_sequence=["#7c9cff"])
+            fs.add_hline(y=0,line_dash="dot",line_color="rgba(124,156,255,.4)")
+            fs.update_traces(line=dict(width=1.8),fillcolor="rgba(124,156,255,.08)")
             st.plotly_chart(th(fs),use_container_width=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -720,17 +794,17 @@ def design_primers(raw,length=20):
 def primer_card(p):
     ok=not p["hairpin"] and not p["dimer"]
     issues="✅ No issues" if ok else " · ".join(filter(None,["⚠️ Hairpin" if p["hairpin"] else "","⚠️ Self-dimer" if p["dimer"] else ""]))
-    col="#15803d" if ok else "#be185d"
+    col="#4fffb0" if ok else "#ff6b6b"
     st.markdown(f"""<div class="gc">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
         <b>{p['name']} Primer</b>
         <span style="font-size:.75rem;font-weight:600;color:{col};">{issues}</span></div>
       <div class="seq-block" style="margin-bottom:12px;">{colorize(p['seq'])}</div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;font-size:.82rem;">
-        <div><span style="color:#7879a0;">Length</span><br><b>{p['len']} bp</b></div>
-        <div><span style="color:#7879a0;">GC</span><br><b>{p['gc']}%</b></div>
-        <div><span style="color:#7879a0;">Tm (NN)</span><br><b>{"N/A" if not p['tm_nn'] else f"{p['tm_nn']} °C"}</b></div>
-        <div><span style="color:#7879a0;">Tm (GC)</span><br><b>{"N/A" if not p['tm_gc'] else f"{p['tm_gc']} °C"}</b></div>
+        <div><span style="color:#9aa4c7;">Length</span><br><b>{p['len']} bp</b></div>
+        <div><span style="color:#9aa4c7;">GC</span><br><b>{p['gc']}%</b></div>
+        <div><span style="color:#9aa4c7;">Tm (NN)</span><br><b>{"N/A" if not p['tm_nn'] else f"{p['tm_nn']} °C"}</b></div>
+        <div><span style="color:#9aa4c7;">Tm (GC)</span><br><b>{"N/A" if not p['tm_gc'] else f"{p['tm_gc']} °C"}</b></div>
       </div></div>""",unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -751,10 +825,16 @@ TOOLS=[
 
 def home():
     st.markdown("""
-    <div style="text-align:center;padding:20px 0 30px;">
-      <div style="font-size:2.6rem;margin-bottom:8px;">🧬</div>
-      <h1 style="margin:0 0 6px;font-size:2rem!important;">BLAST BioSuite</h1>
-      <p style="color:#7879a0;margin:0;">Select a tool to get started</p>
+    <div style="text-align:center;padding:48px 0 40px;">
+      <div style="font-size:2.8rem;margin-bottom:14px;
+                  filter:drop-shadow(0 0 24px rgba(124,156,255,.4));">🧬</div>
+      <h1 style="margin:0 0 8px;font-size:2.2rem!important;
+                 background:linear-gradient(90deg,#7c9cff,#00e0ff);
+                 -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+                 background-clip:text;letter-spacing:-.5px;">BLAST BioSuite</h1>
+      <p style="color:#9aa4c7;margin:0;font-size:.95rem;letter-spacing:.2px;">
+        Minimal · Futuristic · Intelligent bioinformatics
+      </p>
     </div>""",unsafe_allow_html=True)
 
     for row_start in range(0,len(TOOLS),5):
@@ -764,17 +844,27 @@ def home():
             ct,cbg,cb,cbh=ACCENT[acc]
             with col:
                 st.markdown(f"""
-                <div style="background:rgba(255,255,255,.72);backdrop-filter:blur(18px) saturate(160%);
-                  border:1.5px solid {cb};border-radius:18px;padding:22px 18px 12px;
-                  box-shadow:0 2px 16px rgba(100,110,180,.1),inset 0 1px 0 rgba(255,255,255,.85);
-                  margin-bottom:0;">
-                  <div style="width:42px;height:42px;border-radius:11px;background:{cbg};
-                    border:1px solid {cbh};display:flex;align-items:center;justify-content:center;
-                    font-size:1.3rem;margin-bottom:10px;">{icon}</div>
-                  <div style="font-weight:700;color:#1e1f3a;font-size:.9rem;margin-bottom:4px;">{title}</div>
-                  <div style="font-size:.75rem;color:#7879a0;line-height:1.4;margin-bottom:12px;">{desc}</div>
+                <div style="
+                  background:rgba(18,24,38,.72);
+                  backdrop-filter:blur(20px) saturate(130%);
+                  border:1px solid rgba(255,255,255,.08);
+                  border-radius:18px;padding:22px 18px 14px;
+                  box-shadow:0 4px 24px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.04);
+                  transition:all .22s ease;margin-bottom:0;
+                " onmouseover="this.style.borderColor='{cbh}';this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 36px rgba(0,0,0,.5),0 0 20px {cb}'"
+                  onmouseout="this.style.borderColor='rgba(255,255,255,.08)';this.style.transform='';this.style.boxShadow='0 4px 24px rgba(0,0,0,.4)'">
+                  <div style="
+                    width:42px;height:42px;border-radius:12px;
+                    background:{cbg};border:1px solid {cb};
+                    display:flex;align-items:center;justify-content:center;
+                    font-size:1.25rem;margin-bottom:12px;
+                    box-shadow:0 0 16px {cb};">{icon}</div>
+                  <div style="font-weight:700;color:#e6ecff;font-size:.88rem;
+                              margin-bottom:5px;letter-spacing:-.1px;">{title}</div>
+                  <div style="font-size:.74rem;color:#9aa4c7;line-height:1.45;
+                              margin-bottom:14px;">{desc}</div>
                 </div>""",unsafe_allow_html=True)
-                if st.button(f"Open",key=f"nav_{pid}",use_container_width=True): go(pid)
+                if st.button("Open",key=f"nav_{pid}",use_container_width=True): go(pid)
         st.markdown("<div style='margin-bottom:6px'></div>",unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -793,7 +883,7 @@ def page_seqana():
         if fu: raw=fu.read().decode()
     with c2:
         st.markdown('<div class="gc-sm" style="margin-top:0"><b style="font-size:.85rem;">What this shows</b><br>'
-                    '<ul style="font-size:.78rem;color:#7879a0;margin:6px 0 0;padding-left:16px;line-height:1.8">'
+                    '<ul style="font-size:.78rem;color:#9aa4c7;margin:6px 0 0;padding-left:16px;line-height:1.8">'
                     '<li>Sequence length &amp; molecular weight</li>'
                     '<li>GC / AT content</li>'
                     '<li>Melting temperature (short seqs)</li>'
@@ -976,7 +1066,7 @@ def page_dogma():
             if show_rna: st.markdown(seq_block(res["mRNA"],"mRNA","ba"),unsafe_allow_html=True)
             if show_aa:
                 prot=res["Protein"]
-                st.markdown(f'<span class="badge bp">Protein</span><div class="seq-block" style="margin-top:6px;color:#be185d;letter-spacing:.15em">{prot}</div>',unsafe_allow_html=True)
+                st.markdown(f'<span class="badge bp">Protein</span><div class="seq-block" style="margin-top:6px;color:#00e0ff;letter-spacing:.15em">{prot}</div>',unsafe_allow_html=True)
                 adf=pd.Series(list(prot.replace("*",""))).value_counts().reset_index(); adf.columns=["AA","Count"]
                 f=px.bar(adf.head(15),x="AA",y="Count",color="Count",color_continuous_scale=GV,
                          title="Amino Acid Frequency",height=260); f.update_layout(coloraxis_showscale=False)
@@ -1026,20 +1116,23 @@ def page_phylo():
     with c1: up=st.file_uploader("Upload tree file",type=["nwk","tree","dnd","nex","nexus","txt"])
     with c2: fmt=st.selectbox("Format",["newick","nexus","nexml","phyloxml"])
     if not up:
-        st.markdown('<div class="gc" style="text-align:center;padding:36px"><div style="font-size:2.5rem">🌿</div><div style="color:#7879a0">Upload a Newick or NEXUS tree file</div></div>',unsafe_allow_html=True)
+        st.markdown('<div class="gc" style="text-align:center;padding:36px"><div style="font-size:2.5rem">🌿</div><div style="color:#9aa4c7">Upload a Newick or NEXUS tree file</div></div>',unsafe_allow_html=True)
         with st.expander("Example Newick"):
             st.code("((Homo_sapiens:0.12,Pan_troglodytes:0.08):0.05,(Mus_musculus:0.25,Rattus_norvegicus:0.22):0.10,Danio_rerio:0.45);")
         return
     try: tree=Phylo.read(io.StringIO(up.read().decode("utf-8","replace")),fmt)
     except Exception as e: st.error(f"Cannot parse tree: {e}"); return
     terms=tree.get_terminals()
-    fig,ax=plt.subplots(figsize=(12,max(5,len(terms)*.38))); fig.patch.set_facecolor("#f8f9ff"); ax.set_facecolor("#f8f9ff")
+    fig,ax=plt.subplots(figsize=(12,max(5,len(terms)*.38)))
+    fig.patch.set_facecolor("#0b0f19"); ax.set_facecolor("#121826")
     Phylo.draw(tree,axes=ax,do_show=False)
-    ax.tick_params(colors="#7879a0")
-    for sp in ax.spines.values(): sp.set_edgecolor("rgba(150,160,210,.3)")
-    for ln in ax.get_lines(): ln.set_color("#7c3aed"); ln.set_alpha(.7); ln.set_linewidth(1.3)
-    for txt in ax.texts: txt.set_color("#1e1f3a"); txt.set_fontsize(9)
-    ax.set_title("Phylogenetic Tree",color="#7c3aed",fontsize=14,pad=10); plt.tight_layout()
+    ax.tick_params(colors="#9aa4c7")
+    for sp in ax.spines.values(): sp.set_edgecolor("rgba(255,255,255,0.08)")
+    for ln in ax.get_lines(): ln.set_color("#7c9cff"); ln.set_alpha(.85); ln.set_linewidth(1.4)
+    for txt in ax.texts: txt.set_color("#e6ecff"); txt.set_fontsize(9)
+    ax.set_title("Phylogenetic Tree",color="#7c9cff",fontsize=14,pad=10)
+    ax.xaxis.label.set_color("#9aa4c7"); ax.yaxis.label.set_color("#9aa4c7")
+    plt.tight_layout()
     st.pyplot(fig,use_container_width=True); plt.close(fig)
     depths=[tree.distance(t) for t in terms]
     c1,c2,c3=st.columns(3)
@@ -1059,13 +1152,13 @@ def page_primer():
         if fu: seq=fu.read().decode()
     with c2:
         plen=st.slider("Primer length (bp)",15,30,20)
-        st.markdown('<div class="gc-sm"><div style="font-size:.78rem;color:#7879a0;line-height:1.8"><b style="color:#1e1f3a;">Ideal specs</b><br>GC: 40–60% · Tm: 55–65 °C<br>ΔTm &lt; 5 °C · No hairpins</div></div>',unsafe_allow_html=True)
+        st.markdown('<div class="gc-sm"><div style="font-size:.78rem;color:#9aa4c7;line-height:1.8"><b style="color:#e6ecff;">Ideal specs</b><br>GC: 40–60% · Tm: 55–65 °C<br>ΔTm &lt; 5 °C · No hairpins</div></div>',unsafe_allow_html=True)
     if st.button("🔬 Design Primers",disabled=not seq.strip()):
         try:
             res=design_primers(seq,plen); c1,c2=st.columns(2)
             with c1: primer_card(res["fwd"])
             with c2: primer_card(res["rev"])
-            st.markdown(f'<div class="gc-sm" style="text-align:center"><span style="color:#7879a0;font-size:.82rem;">Product Size</span><br><b style="font-size:1.5rem;color:#1d4ed8;">{res["product"]:,} bp</b></div>',unsafe_allow_html=True)
+            st.markdown(f'<div class="gc-sm" style="text-align:center"><span style="color:#9aa4c7;font-size:.82rem;">Product Size</span><br><b style="font-size:1.5rem;color:#7c9cff;">{res["product"]:,} bp</b></div>',unsafe_allow_html=True)
             ft=res["fwd"]["tm_nn"] or res["fwd"]["tm_gc"] or 0
             rt=res["rev"]["tm_nn"] or res["rev"]["tm_gc"] or 0
             dtm=abs(ft-rt)
@@ -1083,9 +1176,9 @@ def page_prot3d():
     with c1:
         pdb=st.text_input("PDB ID",placeholder="e.g. 1HHO",max_chars=4).strip().upper()
         st.markdown("""
-        <div class="gc-sm" style="margin-top:8px">
-          <div style="font-size:.78rem;color:#7879a0;line-height:1.8">
-            <b style="color:#1e1f3a">Common PDB IDs</b><br>
+        <div class="gc" style="margin-top:8px">
+          <div style="font-size:.78rem;color:#9aa4c7;line-height:1.8">
+            <b style="color:#e6ecff;">Common PDB IDs</b><br>
             <code>1HHO</code> — Hemoglobin<br>
             <code>4HHB</code> — Deoxy-hemoglobin<br>
             <code>6LU7</code> — SARS-CoV-2 protease<br>
@@ -1099,7 +1192,7 @@ def page_prot3d():
         if pdb and len(pdb)==4:
             protein_3d_viewer(pdb)
         else:
-            st.markdown('<div class="gc" style="text-align:center;padding:60px 20px"><div style="font-size:3rem">🧊</div><div style="color:#7879a0;margin-top:8px">Enter a 4-character PDB ID to load the structure</div></div>',unsafe_allow_html=True)
+            st.markdown('<div class="gc" style="text-align:center;padding:60px 20px"><div style="font-size:3rem;filter:drop-shadow(0 0 16px rgba(0,224,255,.3))">🧊</div><div style="color:#9aa4c7;margin-top:10px;font-size:.9rem;">Enter a 4-character PDB ID to load the 3D structure</div></div>',unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # ROUTER
