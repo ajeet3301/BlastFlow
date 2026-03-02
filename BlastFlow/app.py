@@ -101,41 +101,50 @@ html,body,[class*="css"],.stApp{{font-family:var(--font)!important;color:var(--t
     radial-gradient(ellipse 30% 30% at 50% 55%,rgba(124,156,255,.025) 0%,transparent 65%);}}
 .main .block-container{{position:relative;z-index:1;}}
 
-/* ─ Top nav bar ─ */
-.nav-bar{{
+/* ─ Nav bar wrapper ─ */
+.nav-wrap{{
   position:sticky;top:0;z-index:999;
-  background:rgba(11,15,25,0.92);
-  backdrop-filter:blur(20px) saturate(150%);
+  background:rgba(11,15,25,0.94);
+  backdrop-filter:blur(24px) saturate(160%);
   border-bottom:1px solid {BD};
-  padding:0 2rem;
-  display:flex;align-items:center;justify-content:space-between;
-  margin:0 -2rem 2rem;
-  box-shadow:0 2px 20px rgba(0,0,0,.5);
+  margin:0 -2rem 1.8rem;
+  padding:10px 2rem 10px;
+  display:flex;align-items:center;gap:16px;
+  box-shadow:0 2px 24px rgba(0,0,0,.55);
 }}
 .nav-logo{{
-  display:flex;align-items:center;gap:10px;
-  font-weight:700;font-size:1.05rem;color:{TM};
-  text-decoration:none;padding:14px 0;letter-spacing:-.2px;
-}}
-.nav-logo span{{
+  font-weight:700;font-size:1rem;letter-spacing:-.2px;
+  white-space:nowrap;
   background:linear-gradient(90deg,{PA},{SA});
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
 }}
-.nav-tabs{{display:flex;gap:2px;align-items:center;}}
-.nav-tab{{
-  display:flex;align-items:center;gap:6px;
-  padding:8px 14px;border-radius:8px;cursor:pointer;
-  font-size:.82rem;font-weight:500;color:{TF};
-  border:1px solid transparent;
-  transition:all .15s ease;text-decoration:none;
-  background:transparent;white-space:nowrap;
+/* Style all nav buttons to look like tabs */
+.stHorizontalBlock [data-testid="column"] > div > div > div > div > button{{
+  background:transparent!important;
+  border:1px solid transparent!important;
+  border-radius:8px!important;
+  color:{TF}!important;
+  font-size:.82rem!important;
+  font-weight:500!important;
+  padding:6px 10px!important;
+  width:100%!important;
+  transition:all .15s!important;
+  box-shadow:none!important;
+  white-space:nowrap!important;
 }}
-.nav-tab:hover{{color:{TM};background:rgba(124,156,255,.08);border-color:rgba(124,156,255,.15);}}
-.nav-tab.active{{
-  color:{PA};background:rgba(124,156,255,.12);
-  border-color:rgba(124,156,255,.25);font-weight:600;
+.stHorizontalBlock [data-testid="column"] > div > div > div > div > button:hover{{
+  background:rgba(124,156,255,.1)!important;
+  border-color:rgba(124,156,255,.2)!important;
+  color:{TM}!important;
+  transform:none!important;
 }}
-.nav-right{{display:flex;align-items:center;gap:8px;font-size:.78rem;color:{TF};}}
+/* Active nav button - applied via class on parent */
+[data-nav-active="true"] button{{
+  background:rgba(124,156,255,.15)!important;
+  border-color:rgba(124,156,255,.3)!important;
+  color:{PA}!important;
+  font-weight:600!important;
+}}
 
 /* ─ Section header ─ */
 .sec-header{{
@@ -417,46 +426,28 @@ def save_history(query, prog, db, n_hits):
 # ══════════════════════════════════════════════════════════════════════════════
 def render_nav():
     cur = st.session_state.page
-    # Build tab pills HTML
-    tabs_html = "".join(
-        f'<span class="nav-tab{"  active" if pid==cur else ""}" '
-        f'id="ntab_{pid}">{icon} {label}</span>'
-        for pid,icon,label in NAV_ITEMS
-    )
-    st.markdown(f"""
-    <div class="nav-bar">
-      <div class="nav-logo">🧬 <span>BLAST BioSuite</span> Pro</div>
-      <div class="nav-tabs">{tabs_html}</div>
-      <div class="nav-right">
-        🔗 NCBI Powered &nbsp;|&nbsp; v3.0
-      </div>
-    </div>""", unsafe_allow_html=True)
-
-    # Streamlit buttons hidden under the nav tabs via columns
-    # We render them as a hidden row for routing
+    # Logo + buttons in one sticky row
+    st.markdown(f'<div class="nav-wrap"><span class="nav-logo">🧬 BLAST BioSuite Pro</span></div>',
+                unsafe_allow_html=True)
     cols = st.columns(len(NAV_ITEMS))
-    for col,(pid,icon,label) in zip(cols,NAV_ITEMS):
+    for col, (pid, icon, label) in zip(cols, NAV_ITEMS):
         with col:
-            if st.button(f"{icon} {label}", key=f"nb_{pid}",
-                         use_container_width=True,
-                         help=label):
+            # Active page gets different style via inline CSS injection
+            is_active = pid == cur
+            if is_active:
+                st.markdown(f"""
+                <style>
+                div[data-testid="column"]:has(button[kind="secondary"][data-nav="{pid}"])
+                  button{{
+                    background:rgba(124,156,255,.18)!important;
+                    border-color:rgba(124,156,255,.4)!important;
+                    color:{PA}!important;font-weight:700!important;
+                  }}
+                </style>""", unsafe_allow_html=True)
+            clicked = st.button(f"{icon} {label}", key=f"nb_{pid}",
+                                use_container_width=True)
+            if clicked:
                 go(pid)
-
-    # CSS to hide the duplicate streamlit buttons (they're only for routing)
-    st.markdown("""
-    <style>
-    /* Hide the helper nav buttons – they're only for routing logic */
-    div[data-testid="column"] > div > div > div > div > button[kind="secondary"] {
-        position:absolute !important;
-        opacity:0 !important;
-        pointer-events:none !important;
-        height:1px !important;
-        width:1px !important;
-        overflow:hidden !important;
-        margin:0 !important;
-        padding:0 !important;
-    }
-    </style>""", unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # BLAST CORE
@@ -1573,4 +1564,3 @@ elif P == "prot3d":  page_prot3d()
 elif P == "ai":      page_ai()
 elif P == "history": page_history()
 else: go("blast")
-    
