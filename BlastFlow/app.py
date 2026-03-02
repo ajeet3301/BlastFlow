@@ -1,10 +1,11 @@
 """
-BLAST BioSuite Pro — Streamlit Bioinformatics App
-Run:  streamlit run app.py
-Requires: GROQ_API_KEY in .streamlit/secrets.toml
+BLAST BioSuite Pro ─ Professional Bioinformatics Suite
+Run:   streamlit run app.py
+Requires: pip install streamlit biopython pandas numpy plotly matplotlib groq openpyxl
+          GROQ_API_KEY in .streamlit/secrets.toml  (optional – enables AI features)
 """
 
-import io, os, re, zipfile, warnings, textwrap
+import io, os, re, zipfile, warnings, textwrap, time, datetime
 from pathlib import Path
 
 import streamlit as st
@@ -19,7 +20,7 @@ import streamlit.components.v1 as stc
 
 try:
     from Bio.Blast import NCBIXML, NCBIWWW
-    from Bio import SeqIO, Phylo
+    from Bio import SeqIO, Phylo, pairwise2
     from Bio.Seq import Seq
     from Bio.SeqUtils import gc_fraction
     from Bio.SeqUtils.MeltingTemp import Tm_NN, Tm_GC, DNA_NN4
@@ -42,245 +43,328 @@ except ImportError:
 
 warnings.filterwarnings("ignore")
 
-# ── Page config ────────────────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE CONFIG
+# ══════════════════════════════════════════════════════════════════════════════
 st.set_page_config(
-    page_title="BLAST BioSuite",
+    page_title="BLAST BioSuite Pro",
     page_icon="🧬",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
 
-if "page" not in st.session_state:
-    st.session_state.page = "home"
+# Session init
+for k,v in [("page","blast"),("blast_results",None),("chat_history",[]),
+             ("history",[]),("bookmarks",[])]:
+    if k not in st.session_state:
+        st.session_state[k] = v
 
-def go(page_id: str):
-    st.session_state.page = page_id
+def go(p):
+    st.session_state.page = p
     st.rerun()
 
-try:
-    GROQ_KEY = st.secrets["GROQ_API_KEY"]
-except Exception:
-    GROQ_KEY = os.environ.get("GROQ_API_KEY", "")
+try:    GROQ_KEY = st.secrets["GROQ_API_KEY"]
+except: GROQ_KEY = os.environ.get("GROQ_API_KEY","")
 
 # ══════════════════════════════════════════════════════════════════════════════
-# CSS — Dark Futuristic Glassmorphism
+# DESIGN SYSTEM
 # ══════════════════════════════════════════════════════════════════════════════
-st.markdown("""
+BG   = "#0b0f19"
+BG2  = "#121826"
+PA   = "#7c9cff"   # primary accent
+SA   = "#00e0ff"   # secondary accent
+TM   = "#e6ecff"   # text main
+TF   = "#9aa4c7"   # text faded
+BD   = "rgba(255,255,255,0.08)"
+
+st.markdown(f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
-:root {
-  --bg:      #0b0f19;
-  --bg2:     #121826;
-  --pa:      #7c9cff;
-  --sa:      #00e0ff;
-  --tm:      #e6ecff;
-  --tf:      #9aa4c7;
-  --bd:      rgba(255,255,255,0.08);
-  --bh:      rgba(255,255,255,0.16);
-  --glass:   rgba(18,24,38,0.72);
-  --glass2:  rgba(18,24,38,0.88);
-  --glow-p:  rgba(124,156,255,0.18);
-  --glow-s:  rgba(0,224,255,0.14);
-  --font:    'Inter', sans-serif;
-  --mono:    'JetBrains Mono', monospace;
-}
+:root{{
+  --bg:{BG};--bg2:{BG2};--pa:{PA};--sa:{SA};--tm:{TM};--tf:{TF};
+  --bd:{BD};--bh:rgba(255,255,255,0.15);
+  --glass:rgba(18,24,38,0.75);--glass2:rgba(18,24,38,0.92);
+  --gp:rgba(124,156,255,0.15);--gs:rgba(0,224,255,0.12);
+  --font:'Inter',sans-serif;--mono:'JetBrains Mono',monospace;
+}}
 
-[data-testid="stSidebar"],[data-testid="collapsedControl"]{display:none!important;}
-.main .block-container{max-width:1220px;padding:2rem 2.5rem 5rem;position:relative;z-index:1;}
-
-html,body,[class*="css"],.stApp{font-family:var(--font)!important;color:var(--tm)!important;}
-.stApp{background:var(--bg)!important;}
-
-/* Ambient glow orbs */
-.stApp::before{
-  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+/* ─ Reset & base ─ */
+[data-testid="stSidebar"],[data-testid="collapsedControl"]{{display:none!important;}}
+.main .block-container{{max-width:1280px;padding:0 2rem 5rem;}}
+html,body,[class*="css"],.stApp{{font-family:var(--font)!important;color:var(--tm)!important;}}
+.stApp{{background:var(--bg)!important;}}
+.stApp::before{{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
   background:
-    radial-gradient(ellipse 55% 45% at 12% 15%, rgba(124,156,255,.07) 0%, transparent 70%),
-    radial-gradient(ellipse 45% 38% at 88% 75%, rgba(0,224,255,.06) 0%, transparent 70%),
-    radial-gradient(ellipse 35% 30% at 55% 95%, rgba(124,156,255,.04) 0%, transparent 70%);}
+    radial-gradient(ellipse 60% 50% at 8% 10%,rgba(124,156,255,.055) 0%,transparent 65%),
+    radial-gradient(ellipse 50% 40% at 92% 80%,rgba(0,224,255,.05) 0%,transparent 65%),
+    radial-gradient(ellipse 30% 30% at 50% 55%,rgba(124,156,255,.025) 0%,transparent 65%);}}
+.main .block-container{{position:relative;z-index:1;}}
 
-/* ── Glass cards ── */
-.gc{
-  background:var(--glass);
-  backdrop-filter:blur(20px) saturate(140%);
-  -webkit-backdrop-filter:blur(20px) saturate(140%);
-  border:1px solid var(--bd);
-  border-radius:16px;padding:22px 24px;margin-bottom:14px;
+/* ─ Top nav bar ─ */
+.nav-bar{{
+  position:sticky;top:0;z-index:999;
+  background:rgba(11,15,25,0.92);
+  backdrop-filter:blur(20px) saturate(150%);
+  border-bottom:1px solid {BD};
+  padding:0 2rem;
+  display:flex;align-items:center;justify-content:space-between;
+  margin:0 -2rem 2rem;
+  box-shadow:0 2px 20px rgba(0,0,0,.5);
+}}
+.nav-logo{{
+  display:flex;align-items:center;gap:10px;
+  font-weight:700;font-size:1.05rem;color:{TM};
+  text-decoration:none;padding:14px 0;letter-spacing:-.2px;
+}}
+.nav-logo span{{
+  background:linear-gradient(90deg,{PA},{SA});
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}}
+.nav-tabs{{display:flex;gap:2px;align-items:center;}}
+.nav-tab{{
+  display:flex;align-items:center;gap:6px;
+  padding:8px 14px;border-radius:8px;cursor:pointer;
+  font-size:.82rem;font-weight:500;color:{TF};
+  border:1px solid transparent;
+  transition:all .15s ease;text-decoration:none;
+  background:transparent;white-space:nowrap;
+}}
+.nav-tab:hover{{color:{TM};background:rgba(124,156,255,.08);border-color:rgba(124,156,255,.15);}}
+.nav-tab.active{{
+  color:{PA};background:rgba(124,156,255,.12);
+  border-color:rgba(124,156,255,.25);font-weight:600;
+}}
+.nav-right{{display:flex;align-items:center;gap:8px;font-size:.78rem;color:{TF};}}
+
+/* ─ Section header ─ */
+.sec-header{{
+  display:flex;align-items:center;gap:14px;margin-bottom:24px;padding-top:4px;
+}}
+.sec-icon{{
+  width:46px;height:46px;border-radius:13px;
+  display:flex;align-items:center;justify-content:center;font-size:1.4rem;
+  box-shadow:0 0 20px var(--ic,rgba(124,156,255,.25));
+}}
+.sec-title{{font-size:1.65rem;font-weight:700;color:{TM};letter-spacing:-.3px;margin:0;}}
+.sec-sub{{font-size:.82rem;color:{TF};margin:2px 0 0;}}
+
+/* ─ Glass card ─ */
+.gc{{
+  background:var(--glass);backdrop-filter:blur(20px) saturate(140%);
+  border:1px solid var(--bd);border-radius:16px;padding:22px 24px;margin-bottom:14px;
   box-shadow:0 4px 24px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.04);
-  transition:border-color .22s ease,box-shadow .22s ease,transform .22s ease;}
-.gc:hover{
-  border-color:var(--bh);
-  box-shadow:0 8px 40px rgba(0,0,0,.5),0 0 20px var(--glow-p),inset 0 1px 0 rgba(255,255,255,.06);
-  transform:translateY(-2px);}
-.gc-sm{
-  background:rgba(18,24,38,.6);
-  backdrop-filter:blur(14px);border:1px solid var(--bd);
-  border-radius:12px;padding:14px 18px;
-  box-shadow:0 2px 12px rgba(0,0,0,.3);}
+  transition:border-color .2s,box-shadow .2s,transform .2s;}}
+.gc:hover{{border-color:var(--bh);box-shadow:0 8px 36px rgba(0,0,0,.5),0 0 18px var(--gp);transform:translateY(-1px);}}
+.gc-sm{{background:rgba(18,24,38,.6);backdrop-filter:blur(14px);border:1px solid var(--bd);
+  border-radius:12px;padding:14px 18px;box-shadow:0 2px 12px rgba(0,0,0,.3);}}
+.gc-inset{{background:rgba(11,15,25,.7);border:1px solid var(--bd);border-radius:12px;padding:16px 20px;}}
 
-/* ── Typography ── */
-h1{font-family:var(--font)!important;font-size:1.95rem!important;font-weight:700!important;
-   color:var(--tm)!important;letter-spacing:-.4px!important;line-height:1.2!important;}
-h2{color:var(--pa)!important;font-weight:600!important;font-size:1.15rem!important;}
-h3{color:var(--sa)!important;font-weight:600!important;font-size:1rem!important;}
-p,li,span,label{color:var(--tm)!important;}
-code,pre{
-  font-family:var(--mono)!important;
-  background:rgba(124,156,255,.1)!important;
-  border:1px solid rgba(124,156,255,.2)!important;
-  color:var(--pa)!important;border-radius:6px;font-size:.82rem!important;}
+/* ─ Info/stat cards ─ */
+.stat-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:16px 0;}}
+.stat{{background:rgba(18,24,38,.8);border:1px solid var(--bd);border-radius:12px;
+  padding:16px 18px;text-align:center;}}
+.stat-val{{font-family:var(--mono);font-size:1.5rem;font-weight:700;color:{PA};margin-bottom:2px;}}
+.stat-lbl{{font-size:.73rem;color:{TF};text-transform:uppercase;letter-spacing:.5px;}}
 
-/* ── Metric cards ── */
-[data-testid="metric-container"]{
-  background:var(--glass)!important;border:1px solid var(--bd)!important;
-  border-radius:14px!important;padding:14px 18px!important;
-  box-shadow:0 2px 16px rgba(0,0,0,.35)!important;transition:border-color .2s!important;}
-[data-testid="metric-container"]:hover{border-color:var(--bh)!important;}
-[data-testid="stMetricValue"]{font-family:var(--mono)!important;color:var(--pa)!important;font-size:1.45rem!important;}
-[data-testid="stMetricLabel"]{color:var(--tf)!important;font-size:.78rem!important;}
+/* ─ Typography ─ */
+h1,h2,h3,h4{{font-family:var(--font)!important;}}
+h1{{font-size:1.9rem!important;font-weight:700!important;color:{TM}!important;letter-spacing:-.4px!important;}}
+h2{{font-size:1.15rem!important;font-weight:600!important;color:{PA}!important;}}
+h3{{font-size:1rem!important;font-weight:600!important;color:{SA}!important;}}
+p,li{{color:{TM}!important;line-height:1.65!important;}}
+a{{color:{PA}!important;}}
+code,pre{{font-family:var(--mono)!important;background:rgba(124,156,255,.1)!important;
+  border:1px solid rgba(124,156,255,.2)!important;color:{PA}!important;border-radius:6px;font-size:.82rem!important;}}
 
-/* ── Buttons ── */
-.stButton>button{
-  background:linear-gradient(135deg,rgba(124,156,255,.18),rgba(0,224,255,.12))!important;
-  color:var(--pa)!important;
-  border:1px solid rgba(124,156,255,.35)!important;
+/* ─ Streamlit metric ─ */
+[data-testid="metric-container"]{{background:rgba(18,24,38,.8)!important;border:1px solid var(--bd)!important;
+  border-radius:14px!important;padding:14px 18px!important;box-shadow:0 2px 16px rgba(0,0,0,.3)!important;}}
+[data-testid="metric-container"]:hover{{border-color:var(--bh)!important;}}
+[data-testid="stMetricValue"]{{font-family:var(--mono)!important;color:{PA}!important;font-size:1.45rem!important;}}
+[data-testid="stMetricLabel"]{{color:{TF}!important;font-size:.78rem!important;}}
+
+/* ─ Buttons ─ */
+.stButton>button{{
+  background:linear-gradient(135deg,rgba(124,156,255,.15),rgba(0,224,255,.1))!important;
+  color:{PA}!important;border:1px solid rgba(124,156,255,.3)!important;
   border-radius:10px!important;font-family:var(--font)!important;font-weight:600!important;
-  font-size:.88rem!important;padding:.48rem 1.3rem!important;
-  backdrop-filter:blur(8px)!important;
-  transition:all .18s!important;}
-.stButton>button:hover{
-  background:linear-gradient(135deg,rgba(124,156,255,.3),rgba(0,224,255,.2))!important;
-  border-color:var(--pa)!important;color:#fff!important;
-  box-shadow:0 0 24px rgba(124,156,255,.35)!important;
-  transform:translateY(-1px)!important;}
-[data-testid="stDownloadButton"]>button{
-  background:linear-gradient(135deg,rgba(0,224,255,.15),rgba(124,156,255,.1))!important;
-  color:var(--sa)!important;border-color:rgba(0,224,255,.3)!important;}
-[data-testid="stDownloadButton"]>button:hover{
-  background:linear-gradient(135deg,rgba(0,224,255,.28),rgba(124,156,255,.18))!important;
-  border-color:var(--sa)!important;color:#fff!important;
-  box-shadow:0 0 24px rgba(0,224,255,.3)!important;}
+  font-size:.87rem!important;padding:.47rem 1.2rem!important;
+  backdrop-filter:blur(8px)!important;transition:all .18s!important;}}
+.stButton>button:hover{{
+  background:linear-gradient(135deg,rgba(124,156,255,.28),rgba(0,224,255,.18))!important;
+  border-color:{PA}!important;color:#fff!important;
+  box-shadow:0 0 22px rgba(124,156,255,.3)!important;transform:translateY(-1px)!important;}}
+[data-testid="stDownloadButton"]>button{{
+  background:linear-gradient(135deg,rgba(0,224,255,.12),rgba(124,156,255,.08))!important;
+  color:{SA}!important;border-color:rgba(0,224,255,.28)!important;}}
+[data-testid="stDownloadButton"]>button:hover{{
+  background:linear-gradient(135deg,rgba(0,224,255,.25),rgba(124,156,255,.15))!important;
+  border-color:{SA}!important;color:#fff!important;
+  box-shadow:0 0 22px rgba(0,224,255,.28)!important;}}
 
-/* ── Inputs ── */
-.stTextArea textarea,.stTextInput input{
-  background:rgba(18,24,38,.85)!important;
-  border:1px solid var(--bd)!important;border-radius:10px!important;
-  color:var(--tm)!important;font-family:var(--font)!important;
-  transition:border-color .18s,box-shadow .18s!important;}
-.stTextArea textarea:focus,.stTextInput input:focus{
-  border-color:rgba(124,156,255,.5)!important;
-  box-shadow:0 0 0 3px rgba(124,156,255,.1)!important;}
-.stSelectbox>div>div{
-  background:rgba(18,24,38,.85)!important;
-  border:1px solid var(--bd)!important;border-radius:10px!important;color:var(--tm)!important;}
+/* ─ Inputs ─ */
+.stTextArea textarea,.stTextInput input{{
+  background:rgba(18,24,38,.88)!important;border:1px solid var(--bd)!important;
+  border-radius:10px!important;color:{TM}!important;font-family:var(--font)!important;
+  transition:border-color .18s,box-shadow .18s!important;}}
+.stTextArea textarea:focus,.stTextInput input:focus{{
+  border-color:rgba(124,156,255,.5)!important;box-shadow:0 0 0 3px rgba(124,156,255,.1)!important;}}
+.stSelectbox>div>div,.stMultiSelect>div>div{{
+  background:rgba(18,24,38,.88)!important;border:1px solid var(--bd)!important;
+  border-radius:10px!important;color:{TM}!important;}}
+.stCheckbox label,[data-testid="stCheckbox"] label{{color:{TM}!important;}}
+.stRadio label{{color:{TM}!important;}}
 
-/* ── File uploader ── */
-[data-testid="stFileUploader"]{
-  background:rgba(18,24,38,.5)!important;
-  border:2px dashed rgba(124,156,255,.2)!important;
-  border-radius:14px!important;transition:all .2s;}
-[data-testid="stFileUploader"]:hover{
-  background:rgba(124,156,255,.05)!important;
-  border-color:rgba(124,156,255,.4)!important;}
+/* ─ File uploader ─ */
+[data-testid="stFileUploader"]{{background:rgba(18,24,38,.5)!important;
+  border:2px dashed rgba(124,156,255,.2)!important;border-radius:14px!important;}}
+[data-testid="stFileUploader"]:hover{{background:rgba(124,156,255,.05)!important;
+  border-color:rgba(124,156,255,.4)!important;}}
 
-/* ── Tabs ── */
-.stTabs [data-baseweb="tab-list"]{
-  background:rgba(18,24,38,.7)!important;
+/* ─ Tabs ─ */
+.stTabs [data-baseweb="tab-list"]{{background:rgba(18,24,38,.7)!important;
   border-radius:12px 12px 0 0!important;border-bottom:1px solid var(--bd)!important;
-  gap:2px!important;padding:4px 4px 0!important;backdrop-filter:blur(12px)!important;}
-.stTabs [data-baseweb="tab"]{
-  background:transparent!important;border-radius:8px 8px 0 0!important;
-  color:var(--tf)!important;font-family:var(--font)!important;
-  font-weight:500!important;font-size:.85rem!important;transition:color .15s!important;}
-.stTabs [data-baseweb="tab"]:hover{color:var(--pa)!important;}
-.stTabs [aria-selected="true"]{
-  background:rgba(124,156,255,.12)!important;color:var(--pa)!important;font-weight:600!important;}
-.stTabs [data-baseweb="tab-panel"]{
-  background:rgba(18,24,38,.55)!important;backdrop-filter:blur(12px)!important;
+  gap:2px!important;padding:4px 4px 0!important;backdrop-filter:blur(12px)!important;}}
+.stTabs [data-baseweb="tab"]{{background:transparent!important;border-radius:8px 8px 0 0!important;
+  color:{TF}!important;font-family:var(--font)!important;font-weight:500!important;font-size:.83rem!important;}}
+.stTabs [data-baseweb="tab"]:hover{{color:{PA}!important;}}
+.stTabs [aria-selected="true"]{{background:rgba(124,156,255,.12)!important;color:{PA}!important;font-weight:600!important;}}
+.stTabs [data-baseweb="tab-panel"]{{background:rgba(18,24,38,.55)!important;backdrop-filter:blur(12px)!important;
   border:1px solid var(--bd)!important;border-top:none!important;
-  border-radius:0 0 12px 12px!important;padding:20px!important;}
+  border-radius:0 0 12px 12px!important;padding:20px!important;}}
 
-/* ── DataFrame ── */
-[data-testid="stDataFrame"]{
-  background:rgba(18,24,38,.7)!important;border:1px solid var(--bd)!important;
-  border-radius:12px!important;overflow:hidden!important;
-  box-shadow:0 2px 16px rgba(0,0,0,.4)!important;}
+/* ─ DataFrame ─ */
+[data-testid="stDataFrame"]{{background:rgba(18,24,38,.7)!important;border:1px solid var(--bd)!important;
+  border-radius:12px!important;overflow:hidden!important;box-shadow:0 2px 16px rgba(0,0,0,.4)!important;}}
 
-/* ── Misc ── */
-.stAlert{border-radius:12px!important;border-left-width:3px!important;}
-[data-testid="stExpander"]{
-  background:rgba(18,24,38,.55)!important;border:1px solid var(--bd)!important;
-  border-radius:12px!important;overflow:hidden;}
-.stProgress>div>div{
-  background:linear-gradient(90deg,var(--pa),var(--sa))!important;border-radius:99px!important;}
-.stProgress{background:rgba(124,156,255,.1)!important;border-radius:99px!important;}
-hr{border:none!important;border-top:1px solid var(--bd)!important;margin:1.2rem 0!important;}
-[data-testid="stChatMessage"]{
-  background:var(--glass)!important;border:1px solid var(--bd)!important;
-  border-radius:14px!important;margin-bottom:8px!important;
-  box-shadow:0 2px 14px rgba(0,0,0,.35)!important;}
-.stSlider [data-testid="stTickBarMin"],
-.stSlider [data-testid="stTickBarMax"]{color:var(--tf)!important;}
+/* ─ Misc ─ */
+.stAlert{{border-radius:12px!important;border-left-width:3px!important;}}
+[data-testid="stExpander"]{{background:rgba(18,24,38,.55)!important;border:1px solid var(--bd)!important;
+  border-radius:12px!important;overflow:hidden;}}
+.stProgress>div>div{{background:linear-gradient(90deg,{PA},{SA})!important;border-radius:99px!important;}}
+.stProgress{{background:rgba(124,156,255,.1)!important;border-radius:99px!important;}}
+hr{{border:none!important;border-top:1px solid var(--bd)!important;margin:1.2rem 0!important;}}
+[data-testid="stChatMessage"]{{background:var(--glass)!important;border:1px solid var(--bd)!important;
+  border-radius:14px!important;margin-bottom:8px!important;}}
+.stSlider [data-testid="stTickBarMin"],.stSlider [data-testid="stTickBarMax"]{{color:{TF}!important;}}
 
-/* ── Sequence block ── */
-.seq-block{
-  font-family:var(--mono);font-size:.82rem;
-  background:rgba(11,15,25,.9);
-  border:1px solid var(--bd);border-radius:10px;
-  padding:14px 18px;line-height:1.9;overflow-x:auto;
-  letter-spacing:.05em;word-break:break-all;}
-.nuc-A{color:#ff6b6b;font-weight:600;}
-.nuc-T{color:#7c9cff;font-weight:600;}
-.nuc-G{color:#00e0ff;font-weight:600;}
-.nuc-C{color:#ffd166;font-weight:600;}
-.nuc-U{color:#ff9f43;font-weight:600;}
+/* ─ Sequence display ─ */
+.seq-block{{font-family:var(--mono);font-size:.81rem;background:rgba(11,15,25,.9);
+  border:1px solid var(--bd);border-radius:10px;padding:14px 18px;
+  line-height:1.9;overflow-x:auto;letter-spacing:.04em;word-break:break-all;}}
+.nuc-A{{color:#ff6b6b;font-weight:600;}} .nuc-T{{color:{PA};font-weight:600;}}
+.nuc-G{{color:{SA};font-weight:600;}}   .nuc-C{{color:#ffd166;font-weight:600;}}
+.nuc-U{{color:#ff9f43;font-weight:600;}}
 
-/* ── Badges ── */
-.badge{display:inline-block;padding:2px 10px;border-radius:99px;
-    font-size:.68rem;font-weight:600;letter-spacing:.4px;text-transform:uppercase;}
-.bv{background:rgba(124,156,255,.12);color:var(--pa);border:1px solid rgba(124,156,255,.25);}
-.bs{background:rgba(0,224,255,.1);color:var(--sa);border:1px solid rgba(0,224,255,.22);}
-.bt{background:rgba(0,224,255,.08);color:#67e8f9;border:1px solid rgba(103,232,249,.2);}
-.ba{background:rgba(255,209,102,.1);color:#ffd166;border:1px solid rgba(255,209,102,.22);}
-.bp{background:rgba(255,107,107,.1);color:#ff6b6b;border:1px solid rgba(255,107,107,.22);}
-.bg{background:rgba(52,211,153,.1);color:#34d399;border:1px solid rgba(52,211,153,.22);}
-.bo{background:rgba(255,159,67,.1);color:#ff9f43;border:1px solid rgba(255,159,67,.22);}
-.bb{background:rgba(124,156,255,.08);color:#93c5fd;border:1px solid rgba(147,197,253,.2);}
-.br{background:rgba(255,107,107,.12);color:#fca5a5;border:1px solid rgba(252,165,165,.2);}
+/* ─ Badges ─ */
+.badge{{display:inline-block;padding:2px 10px;border-radius:99px;
+  font-size:.67rem;font-weight:600;letter-spacing:.4px;text-transform:uppercase;}}
+.bv{{background:rgba(124,156,255,.12);color:{PA};border:1px solid rgba(124,156,255,.25);}}
+.bs{{background:rgba(0,224,255,.1);color:{SA};border:1px solid rgba(0,224,255,.22);}}
+.bt{{background:rgba(103,232,249,.1);color:#67e8f9;border:1px solid rgba(103,232,249,.22);}}
+.ba{{background:rgba(255,209,102,.1);color:#ffd166;border:1px solid rgba(255,209,102,.22);}}
+.bp{{background:rgba(255,107,107,.1);color:#ff6b6b;border:1px solid rgba(255,107,107,.22);}}
+.bg{{background:rgba(52,211,153,.1);color:#34d399;border:1px solid rgba(52,211,153,.22);}}
+.bo{{background:rgba(255,159,67,.1);color:#ff9f43;border:1px solid rgba(255,159,67,.22);}}
+.bb{{background:rgba(147,197,253,.1);color:#93c5fd;border:1px solid rgba(147,197,253,.22);}}
+.br{{background:rgba(252,165,165,.1);color:#fca5a5;border:1px solid rgba(252,165,165,.22);}}
 
-/* ── Scrollbar ── */
-::-webkit-scrollbar{width:6px;height:6px;}
-::-webkit-scrollbar-track{background:var(--bg2);}
-::-webkit-scrollbar-thumb{background:rgba(124,156,255,.25);border-radius:99px;}
-::-webkit-scrollbar-thumb:hover{background:rgba(124,156,255,.45);}
+/* ─ Feature pill tags ─ */
+.pill{{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:99px;
+  font-size:.75rem;font-weight:500;background:rgba(124,156,255,.08);
+  border:1px solid rgba(124,156,255,.18);color:{TF};margin:2px;}}
+
+/* ─ Divider with label ─ */
+.divider{{display:flex;align-items:center;gap:12px;margin:20px 0;}}
+.divider::before,.divider::after{{content:'';flex:1;height:1px;background:var(--bd);}}
+.divider span{{font-size:.75rem;color:{TF};font-weight:500;text-transform:uppercase;letter-spacing:.5px;}}
+
+/* ─ Scrollbar ─ */
+::-webkit-scrollbar{{width:5px;height:5px;}}
+::-webkit-scrollbar-track{{background:transparent;}}
+::-webkit-scrollbar-thumb{{background:rgba(124,156,255,.2);border-radius:99px;}}
+::-webkit-scrollbar-thumb:hover{{background:rgba(124,156,255,.4);}}
 </style>
 """, unsafe_allow_html=True)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# CONSTANTS
+# ══════════════════════════════════════════════════════════════════════════════
+NAV_ITEMS = [
+    ("blast",  "🌐", "NCBI BLAST"),
+    ("seqana", "🔬", "Seq Analyzer"),
+    ("dogma",  "🔀", "Central Dogma"),
+    ("gc",     "📊", "GC Dashboard"),
+    ("primer", "⚗️", "Primer Design"),
+    ("phylo",  "🌿", "Phylo Viewer"),
+    ("prot3d", "🧊", "3D Protein"),
+    ("ai",     "🤖", "AI Assistant"),
+    ("history","📋", "History"),
+]
+
+PROGRAMS = {
+    "blastn":  ("Nucleotide → Nucleotide", "DNA/RNA query vs nucleotide database"),
+    "blastp":  ("Protein → Protein",       "Protein query vs protein database"),
+    "blastx":  ("Nucleotide → Protein",    "Translated DNA query vs protein database"),
+    "tblastn": ("Protein → Nucleotide",    "Protein query vs translated nucleotide db"),
+    "tblastx": ("Nucleotide (6-frame)",    "Translated DNA query vs translated DNA db"),
+    "megablast":("MegaBLAST",              "Optimised for highly similar sequences"),
+    "dc-megablast":("Discontinuous MegaBLAST","For cross-species comparisons"),
+}
+
+DATABASES = {
+    "Nucleotide": ["nt","refseq_rna","16S_ribosomal_RNA","ITS_RefSeq_Fungi",
+                   "env_nt","patnt","vector","mito","human_genomic","mouse_genomic"],
+    "Protein":    ["nr","swissprot","refseq_protein","refseq_select_prot",
+                   "pdb","env_nr","pat","tsa_nr"],
+}
+
+MATRICES  = ["BLOSUM62","BLOSUM45","BLOSUM80","PAM30","PAM70","PAM250"]
+WORD_SIZES = {"blastn":[7,11,15,20,28],"blastp":[2,3,5,6],"blastx":[2,3,5,6],
+              "tblastn":[2,3,5,6],"tblastx":[2,3],"megablast":[16,20,28,32,64],
+              "dc-megablast":[11,12]}
+
+TABLES   = {"Standard (1)":1,"Vertebrate Mitochondrial (2)":2,"Bacterial/Archaea (11)":11,
+            "Ciliate Nuclear (6)":6,"Echinoderm Mito (9)":9,"Euplotid Nuclear (10)":10}
+
+ACCENT = {
+    "violet": (PA, "rgba(124,156,255,.12)", "rgba(124,156,255,.2)", "rgba(124,156,255,.4)"),
+    "sky":    (SA, "rgba(0,224,255,.1)",    "rgba(0,224,255,.18)",  "rgba(0,224,255,.38)"),
+    "teal":   ("#67e8f9","rgba(103,232,249,.1)","rgba(103,232,249,.18)","rgba(103,232,249,.35)"),
+    "amber":  ("#ffd166","rgba(255,209,102,.1)","rgba(255,209,102,.18)","rgba(255,209,102,.35)"),
+    "pink":   ("#ff6b6b","rgba(255,107,107,.1)","rgba(255,107,107,.18)","rgba(255,107,107,.35)"),
+    "green":  ("#34d399","rgba(52,211,153,.1)","rgba(52,211,153,.18)","rgba(52,211,153,.35)"),
+    "orange": ("#ff9f43","rgba(255,159,67,.1)","rgba(255,159,67,.18)","rgba(255,159,67,.35)"),
+    "blue":   ("#93c5fd","rgba(147,197,253,.1)","rgba(147,197,253,.18)","rgba(147,197,253,.35)"),
+    "rose":   ("#fca5a5","rgba(252,165,165,.1)","rgba(252,165,165,.18)","rgba(252,165,165,.35)"),
+}
 
 # ══════════════════════════════════════════════════════════════════════════════
 # PLOTLY DARK THEME
 # ══════════════════════════════════════════════════════════════════════════════
 PLY = dict(
-    paper_bgcolor="rgba(11,15,25,0)",
-    plot_bgcolor="rgba(18,24,38,0.5)",
-    font=dict(family="Inter,sans-serif", color="#e6ecff", size=12),
-    title_font=dict(family="Inter,sans-serif", color="#7c9cff", size=14),
-    legend=dict(bgcolor="rgba(18,24,38,0.85)", bordercolor="rgba(255,255,255,0.08)", borderwidth=1),
-    coloraxis_colorbar=dict(
-        bgcolor="rgba(18,24,38,0.85)", bordercolor="rgba(255,255,255,0.08)",
-        tickfont=dict(color="#9aa4c7"), title_font=dict(color="#9aa4c7"),
-    ),
+    paper_bgcolor="rgba(11,15,25,0)", plot_bgcolor="rgba(18,24,38,.45)",
+    font=dict(family="Inter,sans-serif", color=TM, size=12),
+    title_font=dict(family="Inter,sans-serif", color=PA, size=13, weight="bold"),
+    legend=dict(bgcolor="rgba(18,24,38,.85)", bordercolor=BD, borderwidth=1),
+    coloraxis_colorbar=dict(bgcolor="rgba(18,24,38,.85)", bordercolor=BD,
+        tickfont=dict(color=TF), title_font=dict(color=TF)),
+    hoverlabel=dict(bgcolor="rgba(11,15,25,.95)", bordercolor=BD, font_color=TM),
+    margin=dict(t=40,b=20,l=10,r=10),
 )
-GRID = dict(gridcolor="rgba(255,255,255,0.05)", zerolinecolor="rgba(255,255,255,0.08)")
-GV   = ["#1a1f3a","#2d3a7a","#5472d4","#7c9cff","#00e0ff"]
-GM   = ["#7c9cff","#00e0ff","#34d399","#ffd166","#ff6b6b","#ff9f43"]
+GRID = dict(gridcolor="rgba(255,255,255,.045)", zerolinecolor="rgba(255,255,255,.08)")
+GV = ["#1a1f3a","#2d3a7a","#5472d4",PA,SA]
+GM = [PA,SA,"#34d399","#ffd166","#ff6b6b","#ff9f43"]
 
-def th(fig):
-    fig.update_layout(**PLY); fig.update_xaxes(**GRID); fig.update_yaxes(**GRID)
+def th(fig, height=None):
+    kw = dict(**PLY)
+    if height: kw["height"] = height
+    fig.update_layout(**kw); fig.update_xaxes(**GRID); fig.update_yaxes(**GRID)
     return fig
 
 # ══════════════════════════════════════════════════════════════════════════════
-# CORE HELPERS
+# HELPERS
 # ══════════════════════════════════════════════════════════════════════════════
 def need_bio():
     if not BIO: st.error("Run `pip install biopython`"); st.stop()
@@ -289,444 +373,555 @@ def csv_bytes(df): return df.to_csv(index=False).encode()
 
 def excel_bytes(df):
     buf = io.BytesIO()
-    with pd.ExcelWriter(buf, engine="openpyxl") as w:
-        df.to_excel(w, index=False, sheet_name="BLAST Results")
+    with pd.ExcelWriter(buf,engine="openpyxl") as w:
+        df.to_excel(w,index=False,sheet_name="BLAST")
     return buf.getvalue()
 
 def colorize(seq):
     m={"A":"nuc-A","T":"nuc-T","G":"nuc-G","C":"nuc-C","U":"nuc-U"}
     return "".join(f'<span class="{m[c]}">{c}</span>' if c in m else c for c in seq.upper())
 
-def seq_block(seq,label,badge="bv"):
-    return f'<div style="margin-bottom:12px;"><span class="badge {badge}">{label}</span><div class="seq-block" style="margin-top:6px;">{colorize(seq)}</div></div>'
+def seq_block(seq,label="",badge="bv"):
+    pre = f'<span class="badge {badge}">{label}</span>' if label else ""
+    return f'<div style="margin-bottom:10px;">{pre}<div class="seq-block" style="margin-top:{6 if label else 0}px;">{colorize(seq)}</div></div>'
 
-TABLES = {"Standard (1)":1,"Mitochondrial (2)":2,"Bacterial (11)":11}
-
-ACCENT = {
-    # (text-color, icon-bg, border-rgba, border-hover-rgba)
-    "violet": ("#7c9cff", "rgba(124,156,255,.12)", "rgba(124,156,255,.2)",  "rgba(124,156,255,.4)"),
-    "sky":    ("#00e0ff", "rgba(0,224,255,.1)",     "rgba(0,224,255,.18)",   "rgba(0,224,255,.38)"),
-    "teal":   ("#67e8f9", "rgba(103,232,249,.1)",   "rgba(103,232,249,.18)","rgba(103,232,249,.35)"),
-    "amber":  ("#ffd166", "rgba(255,209,102,.1)",   "rgba(255,209,102,.18)","rgba(255,209,102,.35)"),
-    "pink":   ("#ff6b6b", "rgba(255,107,107,.1)",   "rgba(255,107,107,.18)","rgba(255,107,107,.35)"),
-    "green":  ("#34d399", "rgba(52,211,153,.1)",    "rgba(52,211,153,.18)", "rgba(52,211,153,.35)"),
-    "orange": ("#ff9f43", "rgba(255,159,67,.1)",    "rgba(255,159,67,.18)", "rgba(255,159,67,.35)"),
-    "blue":   ("#93c5fd", "rgba(147,197,253,.1)",   "rgba(147,197,253,.18)","rgba(147,197,253,.35)"),
-    "rose":   ("#fca5a5", "rgba(252,165,165,.1)",   "rgba(252,165,165,.18)","rgba(252,165,165,.35)"),
-}
-
-def page_header(icon,title,accent="violet"):
+def section_header(icon, title, subtitle="", accent="violet"):
     ct,cbg,cb,_ = ACCENT[accent]
-    if st.button("← Home",key="bk"): go("home")
     st.markdown(f"""
-    <div style="display:flex;align-items:center;gap:14px;margin:8px 0 22px;">
-      <div style="width:48px;height:48px;border-radius:14px;background:{cbg};
-                  border:1px solid {cb};display:flex;align-items:center;
-                  justify-content:center;font-size:1.5rem;
-                  box-shadow:0 0 20px {cb};">{icon}</div>
-      <h1 style="margin:0;font-size:1.75rem!important;color:#e6ecff!important;">{title}</h1>
-    </div>""",unsafe_allow_html=True)
+    <div class="sec-header">
+      <div class="sec-icon" style="background:{cbg};border:1px solid {cb};--ic:{cb};">{icon}</div>
+      <div>
+        <div class="sec-title">{title}</div>
+        {"" if not subtitle else f'<div class="sec-sub">{subtitle}</div>'}
+      </div>
+    </div>""", unsafe_allow_html=True)
+
+def divider(label=""):
+    if label:
+        st.markdown(f'<div class="divider"><span>{label}</span></div>', unsafe_allow_html=True)
+    else:
+        st.markdown("<hr>", unsafe_allow_html=True)
+
+def pill(text):
+    return f'<span class="pill">{text}</span>'
+
+def save_history(query, prog, db, n_hits):
+    st.session_state.history.append({
+        "time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "query": query[:60] + ("…" if len(query)>60 else ""),
+        "program": prog, "database": db, "hits": n_hits,
+    })
 
 # ══════════════════════════════════════════════════════════════════════════════
-# BLAST PARSE & QUERY
+# NAV BAR  (rendered every run)
+# ══════════════════════════════════════════════════════════════════════════════
+def render_nav():
+    cur = st.session_state.page
+    # Build tab pills HTML
+    tabs_html = "".join(
+        f'<span class="nav-tab{"  active" if pid==cur else ""}" '
+        f'id="ntab_{pid}">{icon} {label}</span>'
+        for pid,icon,label in NAV_ITEMS
+    )
+    st.markdown(f"""
+    <div class="nav-bar">
+      <div class="nav-logo">🧬 <span>BLAST BioSuite</span> Pro</div>
+      <div class="nav-tabs">{tabs_html}</div>
+      <div class="nav-right">
+        🔗 NCBI Powered &nbsp;|&nbsp; v3.0
+      </div>
+    </div>""", unsafe_allow_html=True)
+
+    # Streamlit buttons hidden under the nav tabs via columns
+    # We render them as a hidden row for routing
+    cols = st.columns(len(NAV_ITEMS))
+    for col,(pid,icon,label) in zip(cols,NAV_ITEMS):
+        with col:
+            if st.button(f"{icon} {label}", key=f"nb_{pid}",
+                         use_container_width=True,
+                         help=label):
+                go(pid)
+
+    # CSS to hide the duplicate streamlit buttons (they're only for routing)
+    st.markdown("""
+    <style>
+    /* Hide the helper nav buttons – they're only for routing logic */
+    div[data-testid="column"] > div > div > div > div > button[kind="secondary"] {
+        position:absolute !important;
+        opacity:0 !important;
+        pointer-events:none !important;
+        height:1px !important;
+        width:1px !important;
+        overflow:hidden !important;
+        margin:0 !important;
+        padding:0 !important;
+    }
+    </style>""", unsafe_allow_html=True)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# BLAST CORE
 # ══════════════════════════════════════════════════════════════════════════════
 @st.cache_data(show_spinner=False)
-def parse_xml(xml_bytes:bytes)->pd.DataFrame:
-    rows,handle=[],io.StringIO(xml_bytes.decode("utf-8",errors="replace"))
+def parse_xml(xml_bytes:bytes) -> pd.DataFrame:
+    rows = []
+    handle = io.StringIO(xml_bytes.decode("utf-8", errors="replace"))
     for rec in NCBIXML.parse(handle):
-        qid,qlen=rec.query.split()[0],rec.query_length
+        qid  = rec.query.split()[0]
+        qlen = rec.query_length
         for aln in rec.alignments:
             for hsp in aln.hsps:
-                cov=round((hsp.query_end-hsp.query_start+1)/qlen*100,1)
+                cov = round((hsp.query_end - hsp.query_start + 1) / qlen * 100, 1)
                 rows.append({
-                    "Accession":aln.hit_id,"Description":aln.hit_def[:90],
-                    "Query ID":qid,"Query Length":qlen,
-                    "Hit Length":aln.length,"Max Score":hsp.score,"Bit Score":hsp.bits,
-                    "E-Value":hsp.expect,
-                    "Identity (%)":round(hsp.identities/hsp.align_length*100,2),
+                    "Accession":         aln.hit_id,
+                    "Description":       aln.hit_def[:100],
+                    "Query ID":          qid,
+                    "Query Length":      qlen,
+                    "Hit Length":        aln.length,
+                    "Max Score":         hsp.score,
+                    "Bit Score":         round(hsp.bits, 1),
+                    "E-Value":           hsp.expect,
+                    "Identity (%)":      round(hsp.identities / hsp.align_length * 100, 2),
                     "Query Coverage (%)":cov,
-                    "Alignment Length":hsp.align_length,"Gaps":hsp.gaps,
-                    "Query Start":hsp.query_start,"Query End":hsp.query_end,
-                    "Sbjct Start":hsp.sbjct_start,"Sbjct End":hsp.sbjct_end,
-                    "Query Seq":hsp.query,"Match Line":hsp.match,"Sbjct Seq":hsp.sbjct,
+                    "Gaps":              hsp.gaps,
+                    "Alignment Length":  hsp.align_length,
+                    "Positives":         hsp.positives,
+                    "Query Start":       hsp.query_start,
+                    "Query End":         hsp.query_end,
+                    "Sbjct Start":       hsp.sbjct_start,
+                    "Sbjct End":         hsp.sbjct_end,
+                    "Query Seq":         hsp.query,
+                    "Match Line":        hsp.match,
+                    "Sbjct Seq":         hsp.sbjct,
                 })
     if not rows: return pd.DataFrame()
     return pd.DataFrame(rows).sort_values("E-Value").reset_index(drop=True)
 
-@st.cache_data(show_spinner=False,ttl=3600)
-def run_blast(seq,prog,db):
-    h=NCBIWWW.qblast(prog,db,seq); return parse_xml(h.read().encode())
+@st.cache_data(show_spinner=False, ttl=3600)
+def run_blast_ncbi(seq:str, prog:str, db:str,
+                   hitlist:int=50, expect:float=10.0,
+                   word_size:int=0, matrix:str="BLOSUM62",
+                   filter_low:bool=True, entrez_query:str="") -> pd.DataFrame:
+    kwargs = dict(hitlist_size=hitlist, expect=expect, filter="L" if filter_low else "F")
+    if word_size>0: kwargs["word_size"] = word_size
+    if prog in("blastp","blastx","tblastn","tblastx"): kwargs["matrix_name"] = matrix
+    if entrez_query.strip(): kwargs["entrez_query"] = entrez_query.strip()
+    h = NCBIWWW.qblast(prog, db, seq, **kwargs)
+    return parse_xml(h.read().encode())
 
 # ══════════════════════════════════════════════════════════════════════════════
-# SEQ ANALYZER  (pre-BLAST)
+# BLAST RESULTS – TABLE
 # ══════════════════════════════════════════════════════════════════════════════
-def detect_seq_type(seq:str)->str:
-    seq=seq.upper().replace(" ","")
-    dna_chars=set("ATGCN"); rna_chars=set("AUGCN")
-    prot_chars=set("ACDEFGHIKLMNPQRSTVWY*X")
-    if set(seq)<=dna_chars: return "DNA"
-    if set(seq)<=rna_chars: return "RNA"
-    if set(seq)<=prot_chars: return "Protein"
-    return "DNA"  # fallback
+DISP_COLS = ["Accession","Description","Max Score","Bit Score","E-Value",
+             "Identity (%)","Query Coverage (%)","Alignment Length","Gaps"]
 
-def seq_analysis(raw:str)->dict:
-    clean=re.sub(r">.*\n?","",raw); clean=re.sub(r"\s","",clean).upper()
-    if not clean: return {}
-    stype=detect_seq_type(clean)
-    length=len(clean)
-    counts={c:clean.count(c) for c in set(clean)}
-    try:
-        mw=molecular_weight(Seq(clean),seq_type="DNA" if stype in("DNA","RNA") else "protein")
-    except: mw=None
-
-    result={"seq":clean,"type":stype,"length":length,"counts":counts,"mw":mw}
-
-    if stype=="DNA":
-        result["gc"]=round(gc_fraction(Seq(clean))*100,2)
-        result["at"]=round(100-result["gc"],2)
-        result["tm"]=round(4*(clean.count("G")+clean.count("C"))+2*(clean.count("A")+clean.count("T")),1) if length<30 else None
-    elif stype=="Protein":
-        result["gc"]=None
-    return result
-
-def render_seq_analysis(info:dict):
-    if not info: return
-    stype=info["type"]
-    ct,cbg,cb,_=ACCENT["violet"] if stype=="DNA" else (ACCENT["teal"] if stype=="Protein" else ACCENT["sky"])
-
-    # Metric row
-    c1,c2,c3,c4=st.columns(4)
-    c1.metric("Sequence Type",stype)
-    c2.metric("Length",f"{info['length']:,}" + (" bp" if stype!="Protein" else " aa"))
-    c3.metric("GC Content",f"{info['gc']}%" if info.get('gc') is not None else "—")
-    c4.metric("Mol. Weight",f"{info['mw']/1000:.2f} kDa" if info["mw"] else "—")
-
-    if stype=="DNA":
-        c5,c6=st.columns(2)
-        with c5: st.metric("AT Content",f"{info['at']}%")
-        with c6: st.metric("Tm (Wallace)",f"{info['tm']} °C" if info['tm'] else ">30 bp formula N/A")
-
-    st.markdown("---")
-    # ── Frequency charts ──────────────────────────────────────────────────
-    cnt=info["counts"]
-    freq_df=pd.DataFrame({"Base/AA":list(cnt.keys()),"Count":list(cnt.values())})
-    freq_df=freq_df.sort_values("Count",ascending=False)
-
-    COLOR_MAP_DNA={"A":"#ef4444","T":"#3b82f6","G":"#16a34a","C":"#f59e0b","N":"#94a3b8","U":"#ea580c"}
-
-    ca,cb2=st.columns(2)
-    with ca:
-        if stype in("DNA","RNA"):
-            f=px.bar(freq_df,x="Base/AA",y="Count",color="Base/AA",
-                     color_discrete_map=COLOR_MAP_DNA,
-                     title="Nucleotide Frequency",height=320)
-        else:
-            f=px.bar(freq_df.head(20),x="Base/AA",y="Count",
-                     color="Count",color_continuous_scale=GV,
-                     title="Amino Acid Frequency (Top 20)",height=320)
-        f.update_layout(showlegend=False,coloraxis_showscale=False)
-        st.plotly_chart(th(f),use_container_width=True)
-
-    with cb2:
-        if stype in("DNA","RNA") and len(freq_df)<=8:
-            fp=px.pie(freq_df,names="Base/AA",values="Count",hole=0.42,
-                      color="Base/AA",color_discrete_map=COLOR_MAP_DNA,
-                      title="Base Composition",height=320)
-            fp.update_traces(textinfo="label+percent",
-                             marker=dict(line=dict(color="white",width=2)))
-            st.plotly_chart(th(fp),use_container_width=True)
-        else:
-            f2=px.bar(freq_df.head(20),y="Base/AA",x="Count",orientation="h",
-                      color="Count",color_continuous_scale=GV,
-                      title="Frequency (horizontal)",height=320)
-            f2.update_layout(yaxis=dict(autorange="reversed"),coloraxis_showscale=False)
-            st.plotly_chart(th(f2),use_container_width=True)
-
-    # GC skew for DNA
-    if stype=="DNA" and info["length"]>100:
-        raw=info["seq"]; w=max(50,info["length"]//50)
-        skews,pos=[],[]
-        for i in range(0,len(raw)-w,w//2):
-            ch=raw[i:i+w]; g,c=ch.count("G"),ch.count("C"); d=g+c
-            skews.append((g-c)/d if d else 0); pos.append(i+w//2)
-        fs=px.area(x=pos,y=skews,title="GC Skew [(G−C)/(G+C)]",
-                   labels={"x":"Position (bp)","y":"GC Skew"},height=260,
-                   color_discrete_sequence=["#7c9cff"])
-        fs.add_hline(y=0,line_dash="dot",line_color="rgba(124,156,255,.4)")
-        fs.update_traces(line=dict(width=1.8),fillcolor="rgba(124,156,255,.08)")
-        st.plotly_chart(th(fs),use_container_width=True)
-
-    # Coloured sequence preview
-    st.markdown("**Sequence Preview (first 300 characters)**")
-    st.markdown(f'<div class="seq-block">{colorize(info["seq"][:300])}{"…" if info["length"]>300 else ""}</div>',
-                unsafe_allow_html=True)
-
-# ══════════════════════════════════════════════════════════════════════════════
-# BLAST CHARTS — comprehensive
-# ══════════════════════════════════════════════════════════════════════════════
-def blast_charts(df:pd.DataFrame):
+def blast_table(df:pd.DataFrame, key:str="tbl"):
     if df.empty: return
+    with st.expander("⚙️ Filter & Columns", expanded=False):
+        c1,c2,c3,c4 = st.columns(4)
+        with c1: ev  = st.slider("Max E-Value",     0.0,  1.0, 1.0, .001, format="%.3f", key=f"ev_{key}")
+        with c2: mi  = st.slider("Min Identity %",  0.0,100.0, 0.0,  1.0, key=f"mi_{key}")
+        with c3: mc  = st.slider("Min Coverage %",  0.0,100.0, 0.0,  1.0, key=f"mc_{key}")
+        with c4: mb  = st.slider("Min Bit Score",   0.0,500.0, 0.0, 10.0, key=f"mb_{key}")
+        avail = [c for c in DISP_COLS if c in df.columns]
+        show  = st.multiselect("Visible columns", avail, default=avail, key=f"cs_{key}")
 
-    t1,t2,t3,t4=st.tabs(["📊 Identity & E-Value","🗺 Alignment Map","🔵 Dot Plot","📈 Distribution"])
+    fdf = df[
+        (df["E-Value"]           <= ev) &
+        (df["Identity (%)"]      >= mi) &
+        (df["Query Coverage (%)"]>= mc) &
+        (df["Bit Score"]         >= mb)
+    ]
+    cols = [c for c in (show or DISP_COLS) if c in fdf.columns]
+    disp = fdf[cols]
+    st.caption(f"**{len(disp):,}** hits shown • Click column header to sort")
+    st.dataframe(disp, use_container_width=True, height=440,
+        column_config={
+            "E-Value":           st.column_config.NumberColumn(format="%.2e"),
+            "Identity (%)":      st.column_config.ProgressColumn(format="%.1f%%", min_value=0, max_value=100),
+            "Query Coverage (%)":st.column_config.ProgressColumn(format="%.1f%%", min_value=0, max_value=100),
+            "Bit Score":         st.column_config.NumberColumn(format="%.1f"),
+        })
 
-    with t1:
-        top10=df.nlargest(10,"Identity (%)").copy()
-        top10["Lbl"]=top10["Accession"]+" · "+top10["Description"].str[:35]
-        f1=px.bar(top10,x="Identity (%)",y="Lbl",orientation="h",
-                  color="Identity (%)",color_continuous_scale=GV,
-                  title="Top 10 Hits — Identity %",height=380)
-        f1.update_layout(yaxis=dict(autorange="reversed"),coloraxis_showscale=False)
-        f1.update_xaxes(range=[0,105])
-        st.plotly_chart(th(f1),use_container_width=True)
+    d1,d2,d3,d4 = st.columns(4)
+    with d1:
+        st.download_button("⬇️ CSV", csv_bytes(disp), f"blast_{key}.csv","text/csv",
+                           key=f"dcsv_{key}", use_container_width=True)
+    with d2:
+        if XLSX:
+            st.download_button("⬇️ Excel", excel_bytes(disp), f"blast_{key}.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key=f"dxl_{key}", use_container_width=True)
+    with d3:
+        fasta_lines = []
+        for _,r in fdf.head(25).iterrows():
+            if r.get("Sbjct Seq"):
+                fasta_lines += [f">{r['Accession']} {r['Description']}", r["Sbjct Seq"]]
+        if fasta_lines:
+            st.download_button("⬇️ FASTA (top 25)","\n".join(fasta_lines).encode(),
+                               f"hits_{key}.fasta","text/plain",key=f"dfa_{key}",use_container_width=True)
+    with d4:
+        report_lines = [
+            "BLAST Analysis Report", "="*50,
+            f"Generated: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}",
+            f"Total Hits: {len(disp):,}", f"Best E-Value: {fdf['E-Value'].min():.2e}",
+            f"Max Identity: {fdf['Identity (%)'].max():.1f}%",
+            f"Max Coverage: {fdf['Query Coverage (%)'].max():.1f}%",
+            "", "Top 10 Hits:", "-"*40,
+        ]
+        for i,(_,r) in enumerate(fdf.head(10).iterrows(),1):
+            report_lines.append(
+                f"{i:2}. {r['Accession']:20} E={r['E-Value']:.2e}  Ident={r['Identity (%)']:.1f}%  {r['Description'][:50]}"
+            )
+        st.download_button("📄 Report TXT","\n".join(report_lines).encode(),
+                           f"report_{key}.txt","text/plain",key=f"drp_{key}",use_container_width=True)
 
-        sdf=df.copy(); sdf["ev"]=sdf["E-Value"].apply(lambda e:max(e,1e-200))
-        f2=px.scatter(sdf,x="Bit Score",y="ev",color="Identity (%)",
-                      size="Alignment Length",
-                      hover_data=["Accession","Description","Identity (%)","E-Value"],
-                      color_continuous_scale=GM,log_y=True,
-                      title="E-Value vs Bit Score  (bubble = alignment length)",
-                      labels={"ev":"E-Value (log scale)"},height=380)
-        st.plotly_chart(th(f2),use_container_width=True)
-
-    with t2:
-        # Sequence Alignment Map — horizontal bars per hit showing query coverage
-        adf=df.nlargest(20,"Identity (%)").copy()
-        qlen=adf["Query Length"].iloc[0] if "Query Length" in adf.columns else 100
-        fig=go.Figure()
-        for i,row in adf.reset_index(drop=True).iterrows():
-            pct_id=row["Identity (%)"]
-            col=f"rgba({int(124+pct_id)},{int(58+pct_id*.5)},237,0.85)"
-            fig.add_trace(go.Bar(
-                y=[f"{row['Accession']}"],x=[row["Query End"]-row["Query Start"]],
-                base=[row["Query Start"]],orientation="h",
-                marker_color=f"rgba({max(0,int(200-pct_id))},{int(pct_id*2)},{int(pct_id*1.5)},0.8)",
-                hovertemplate=(f"<b>{row['Description'][:60]}</b><br>"
-                               f"Identity: {row['Identity (%)']}%<br>"
-                               f"E-Value: {row['E-Value']:.2e}<br>"
-                               f"Query: {row['Query Start']}–{row['Query End']}<extra></extra>"),
-                showlegend=False,
-            ))
-        fig.update_layout(
-            title="Sequence Alignment Map — Query Coverage per Hit",
-            xaxis_title="Query Position (bp)",
-            yaxis=dict(autorange="reversed",tickfont=dict(size=10)),
-            height=max(300,len(adf)*28+80),barmode="overlay",
-        )
-        fig.add_vline(x=qlen,line_dash="dash",line_color="#dc2626",
-                      annotation_text="Query End",annotation_position="top right")
-        st.plotly_chart(th(fig),use_container_width=True)
-        st.caption("Each bar = one hit. Colour: green = high identity, red = low. Width = aligned region on query.")
-
-    with t3:
-        st.markdown("#### Dot Plot — Two Sequence Comparison")
-        st.info("Paste two sequences below to compare them. Diagonal lines = matching regions.")
-        dc1,dc2=st.columns(2)
-        with dc1: s1=st.text_area("Sequence 1",height=100,placeholder="ATGCGTACGT…",key="dp1")
-        with dc2: s2=st.text_area("Sequence 2",height=100,placeholder="ATGCGTACGT…",key="dp2")
-        wsize=st.slider("Word size (k-mer)",3,12,6,key="dpw")
-        if st.button("Generate Dot Plot",key="dpbtn"):
-            if s1.strip() and s2.strip():
-                render_dot_plot(re.sub(r"\s|>.*","",s1).upper(),
-                                re.sub(r"\s|>.*","",s2).upper(), wsize)
-            else: st.warning("Enter both sequences.")
-
-    with t4:
-        c1,c2=st.columns(2)
-        with c1:
-            f3=px.histogram(df[df["E-Value"]>0],x="E-Value",nbins=35,log_x=True,
-                            color_discrete_sequence=["#7c9cff"],
-                            title="E-Value Distribution",height=300)
-            f3.update_layout(bargap=.06)
-            st.plotly_chart(th(f3),use_container_width=True)
-        with c2:
-            f4=px.box(df,x="Query ID",y="Bit Score",color="Query ID",
-                      title="Bit Score by Query",height=300)
-            f4.update_layout(showlegend=False); f4.update_xaxes(tickangle=25)
-            st.plotly_chart(th(f4),use_container_width=True)
-
-        f5=px.scatter(df,x="Query Coverage (%)",y="Identity (%)",
-                      color="E-Value",size="Bit Score",
-                      color_continuous_scale="RdYlGn",
-                      hover_data=["Accession","Description"],
-                      title="Query Coverage vs Identity %",height=360,
-                      labels={"E-Value":"E-Value"})
-        st.plotly_chart(th(f5),use_container_width=True)
-
-
-def render_dot_plot(s1:str,s2:str,k:int=6):
+# ══════════════════════════════════════════════════════════════════════════════
+# BLAST CHARTS – all visualisations
+# ══════════════════════════════════════════════════════════════════════════════
+def render_dot_plot(s1,s2,k=6):
+    s1,s2 = s1.upper().strip(),s2.upper().strip()
+    kmers = {}
+    for i in range(len(s1)-k+1):
+        mer = s1[i:i+k]
+        if mer not in kmers: kmers[mer]=[]
+        kmers[mer].append(i)
     xs,ys=[],[]
-    kmers={s1[i:i+k]:i for i in range(len(s1)-k+1)}
     for j in range(len(s2)-k+1):
         mer=s2[j:j+k]
         if mer in kmers:
-            xs.append(kmers[mer]); ys.append(j)
-    if not xs: st.warning("No matching k-mers found. Try a smaller word size."); return
-    fig=px.scatter(x=xs,y=ys,opacity=.4,
-                   color_discrete_sequence=["#7c9cff"],
-                   labels={"x":"Sequence 1 position","y":"Sequence 2 position"},
-                   title=f"Dot Plot (k={k})",height=420)
-    fig.update_traces(marker=dict(size=3))
-    st.plotly_chart(th(fig),use_container_width=True)
-    st.caption(f"{len(xs):,} matching {k}-mers found.")
+            for x in kmers[mer]: xs.append(x); ys.append(j)
+    if not xs: st.warning("No matching k-mers. Try a smaller word size."); return
+    fig = px.scatter(x=xs,y=ys,opacity=.35,color_discrete_sequence=[PA],
+        labels={"x":f"Seq 1 (len={len(s1)})","y":f"Seq 2 (len={len(s2)})"},
+        title=f"Dot Plot — k={k}  ·  {len(xs):,} matches")
+    fig.update_traces(marker_size=3)
+    st.plotly_chart(th(fig,400), use_container_width=True)
 
-# ══════════════════════════════════════════════════════════════════════════════
-# COMPREHENSIVE BLAST TABLE  (with all key metrics + exports)
-# ══════════════════════════════════════════════════════════════════════════════
-DISPLAY_COLS=["Accession","Description","Max Score","Bit Score","E-Value",
-              "Identity (%)","Query Coverage (%)","Alignment Length","Gaps"]
-
-def blast_table(df:pd.DataFrame,key:str="tbl"):
+def blast_charts(df:pd.DataFrame):
     if df.empty: return
+    t1,t2,t3,t4,t5 = st.tabs(
+        ["📊 Identity & Score","🗺 Alignment Map","🔵 Dot Plot","📈 Distributions","🏷 Species Breakdown"])
 
-    with st.expander("⚙️ Filter & Columns",expanded=False):
-        c1,c2,c3=st.columns(3)
-        with c1: ev=st.slider("Max E-Value",0.0,1.0,1.0,.001,format="%.3f",key=f"ev_{key}")
-        with c2: mi=st.slider("Min Identity %",0.0,100.0,0.0,1.0,key=f"mi_{key}")
-        with c3: mc=st.slider("Min Query Coverage %",0.0,100.0,0.0,1.0,key=f"mc_{key}")
-        show=st.multiselect("Columns to display",
-                            options=[c for c in DISPLAY_COLS if c in df.columns],
-                            default=[c for c in DISPLAY_COLS if c in df.columns],
-                            key=f"cols_{key}")
+    with t1:
+        top = df.nlargest(min(15,len(df)),"Identity (%)").copy()
+        top["Lbl"] = top["Accession"].str[:15] + " · " + top["Description"].str[:35]
+        f1 = px.bar(top,x="Identity (%)",y="Lbl",orientation="h",
+                    color="Identity (%)",color_continuous_scale=GV,
+                    title="Top Hits — Identity %", height=420)
+        f1.update_layout(yaxis=dict(autorange="reversed"), coloraxis_showscale=False)
+        f1.update_xaxes(range=[0,105])
+        st.plotly_chart(th(f1), use_container_width=True)
 
-    fdf=df[(df["E-Value"]<=ev)&(df["Identity (%)"]>=mi)&(df["Query Coverage (%)"]>=mc)]
-    show=[c for c in show if c in fdf.columns]
-    disp=fdf[show] if show else fdf
+        sdf = df.copy(); sdf["_ev"] = sdf["E-Value"].apply(lambda e:max(e,1e-200))
+        f2 = px.scatter(sdf,x="Bit Score",y="_ev",color="Identity (%)",
+                        size="Alignment Length",size_max=18,
+                        hover_data=["Accession","Description","Identity (%)","E-Value","Query Coverage (%)"],
+                        color_continuous_scale=GM,log_y=True,
+                        title="E-Value vs Bit Score  (bubble = alignment length)",
+                        labels={"_ev":"E-Value (log)"},height=400)
+        st.plotly_chart(th(f2), use_container_width=True)
 
-    st.markdown(f"**{len(disp):,}** hits shown · click column header to sort")
-    st.dataframe(disp,use_container_width=True,height=420,
-                 column_config={
-                     "E-Value":st.column_config.NumberColumn(format="%.2e"),
-                     "Identity (%)":st.column_config.ProgressColumn(format="%.1f%%",min_value=0,max_value=100),
-                     "Query Coverage (%)":st.column_config.ProgressColumn(format="%.1f%%",min_value=0,max_value=100),
-                 })
+        # Coverage vs Identity scatter
+        f3 = px.scatter(df,x="Query Coverage (%)",y="Identity (%)",
+                        color="Bit Score",size="Alignment Length",size_max=14,
+                        color_continuous_scale=["#1a1f3a",PA,SA],
+                        hover_data=["Accession","Description"],
+                        title="Query Coverage vs Identity %",height=380)
+        st.plotly_chart(th(f3), use_container_width=True)
 
-    # ── Download row ──────────────────────────────────────────────────────
-    d1,d2,d3=st.columns(3)
-    with d1:
-        st.download_button("⬇️ CSV",csv_bytes(disp),f"blast_{key}.csv","text/csv",
-                           key=f"dcsv_{key}",use_container_width=True)
-    with d2:
-        if XLSX:
-            st.download_button("⬇️ Excel",excel_bytes(disp),f"blast_{key}.xlsx",
-                               "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                               key=f"dxlsx_{key}",use_container_width=True)
-        else:
-            st.button("⬇️ Excel (install openpyxl)",disabled=True,
-                      use_container_width=True,key=f"dxlsx_dis_{key}")
-    with d3:
-        # Download top hits as FASTA
-        fasta_lines=[]
-        for _,row in fdf.head(20).iterrows():
-            if "Sbjct Seq" in row and row["Sbjct Seq"]:
-                fasta_lines.append(f">{row['Accession']} {row['Description']}")
-                fasta_lines.append(row["Sbjct Seq"])
-        if fasta_lines:
-            st.download_button("⬇️ Top Hits FASTA","\n".join(fasta_lines).encode(),
-                               f"hits_{key}.fasta","text/plain",
-                               key=f"dfasta_{key}",use_container_width=True)
+    with t2:
+        adf = df.nlargest(min(20,len(df)),"Identity (%)").reset_index(drop=True)
+        qlen = int(adf["Query Length"].iloc[0]) if "Query Length" in adf.columns else 1000
+        fig = go.Figure()
+        for _,row in adf.iterrows():
+            pct = row["Identity (%)"]
+            r = int(max(0,min(255, 255-pct*2.5)))
+            g = int(max(0,min(255, pct*2.5)))
+            b = 180
+            fig.add_trace(go.Bar(
+                y=[f"{row['Accession'][:18]}"],
+                x=[row["Query End"]-row["Query Start"]],
+                base=[row["Query Start"]],
+                orientation="h",
+                marker_color=f"rgba({r},{g},{b},.8)",
+                hovertemplate=(
+                    f"<b>{row['Description'][:55]}</b><br>"
+                    f"Identity: {row['Identity (%)']}%<br>"
+                    f"E-Value: {row['E-Value']:.2e}<br>"
+                    f"Pos: {row['Query Start']}–{row['Query End']}<extra></extra>"
+                ),
+                showlegend=False,
+            ))
+        fig.update_layout(title="Sequence Alignment Map — Query Coverage",
+                          xaxis_title="Query Position (bp)",
+                          yaxis=dict(autorange="reversed",tickfont_size=10),
+                          height=max(300,len(adf)*26+80))
+        fig.add_vline(x=qlen,line_dash="dash",line_color="#ff6b6b",opacity=.6,
+                      annotation_text="Query end",annotation_position="top right")
+        st.plotly_chart(th(fig), use_container_width=True)
+        st.caption("Colour: green = high identity, red = low. Width = aligned region on query.")
+
+    with t3:
+        dc1,dc2 = st.columns(2)
+        with dc1: s1=st.text_area("Sequence 1",height=90,placeholder="ATGCGT…",key="dp1")
+        with dc2: s2=st.text_area("Sequence 2",height=90,placeholder="ATGCGT…",key="dp2")
+        wk = st.slider("Word size (k-mer)",3,15,6,key="dpw")
+        if st.button("Generate Dot Plot",key="dpbtn"):
+            if s1.strip() and s2.strip():
+                render_dot_plot(re.sub(r"\s|>.*","",s1), re.sub(r"\s|>.*","",s2), wk)
+            else: st.warning("Paste both sequences first.")
+
+    with t4:
+        c1,c2 = st.columns(2)
+        with c1:
+            fe = px.histogram(df[df["E-Value"]>0],x="E-Value",nbins=40,log_x=True,
+                              color_discrete_sequence=[PA],title="E-Value Distribution")
+            fe.update_layout(bargap=.05)
+            st.plotly_chart(th(fe,300), use_container_width=True)
+        with c2:
+            fi = px.histogram(df,x="Identity (%)",nbins=30,
+                              color_discrete_sequence=[SA],title="Identity % Distribution")
+            fi.update_layout(bargap=.05)
+            st.plotly_chart(th(fi,300), use_container_width=True)
+
+        c3,c4 = st.columns(2)
+        with c3:
+            fb = px.box(df,y="Bit Score",color_discrete_sequence=[PA],
+                        title="Bit Score Box Plot")
+            st.plotly_chart(th(fb,280), use_container_width=True)
+        with c4:
+            fc = px.histogram(df,x="Query Coverage (%)",nbins=25,
+                              color_discrete_sequence=["#34d399"],
+                              title="Query Coverage Distribution")
+            fc.update_layout(bargap=.05)
+            st.plotly_chart(th(fc,280), use_container_width=True)
+
+    with t5:
+        # Extract organism names heuristically from description
+        def extract_org(desc):
+            m = re.search(r"\[([^\]]+)\]",str(desc))
+            return m.group(1) if m else "Unknown"
+        sdf = df.copy(); sdf["Organism"] = sdf["Description"].apply(extract_org)
+        org_counts = sdf["Organism"].value_counts().head(15).reset_index()
+        org_counts.columns = ["Organism","Count"]
+        fo = px.bar(org_counts,x="Count",y="Organism",orientation="h",
+                    color="Count",color_continuous_scale=GV,
+                    title="Top 15 Organisms in Results")
+        fo.update_layout(yaxis=dict(autorange="reversed"),coloraxis_showscale=False)
+        st.plotly_chart(th(fo,400), use_container_width=True)
+
+        # Best hit per organism
+        best = sdf.sort_values("Identity (%)").drop_duplicates("Organism",keep="last")
+        best = best[["Organism","Accession","Identity (%)","E-Value","Bit Score"]].head(20)
+        st.caption("Best hit per organism (by Identity %)")
+        st.dataframe(best, use_container_width=True, height=320,
+            column_config={"E-Value":st.column_config.NumberColumn(format="%.2e"),
+                           "Identity (%)":st.column_config.ProgressColumn(format="%.1f%%",min_value=0,max_value=100)})
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 3D PROTEIN VIEWER  (py3Dmol via HTML component)
+# AI WIDGET
 # ══════════════════════════════════════════════════════════════════════════════
-def protein_3d_viewer(pdb_id:str):
-    pid=pdb_id.strip().upper()
-    if not pid or len(pid)!=4:
-        st.warning("Enter a valid 4-character PDB ID (e.g. 1HHO, 6LU7, 4HHB)"); return
-
-    html=f"""
-    <html><head>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-    <script src="https://3Dmol.csb.pitt.edu/build/3Dmol-min.js"></script>
-    <style>
-      body{{margin:0;background:#0b0f19;}}
-      #viewer{{width:100%;height:480px;position:relative;border-radius:16px;overflow:hidden;
-               box-shadow:0 4px 32px rgba(0,0,0,.6),0 0 40px rgba(124,156,255,.08);}}
-      .ctrl{{position:absolute;top:12px;right:12px;z-index:10;display:flex;gap:6px;flex-wrap:wrap;}}
-      .btn{{background:rgba(18,24,38,.85);border:1px solid rgba(124,156,255,.25);
-            border-radius:8px;padding:5px 12px;font-family:Inter,sans-serif;font-size:12px;
-            font-weight:600;color:#7c9cff;cursor:pointer;backdrop-filter:blur(10px);
-            transition:all .15s;}}
-      .btn:hover{{background:rgba(124,156,255,.15);border-color:rgba(124,156,255,.5);color:#e6ecff;}}
-      .label{{position:absolute;bottom:12px;left:12px;background:rgba(18,24,38,.85);
-              backdrop-filter:blur(10px);border-radius:10px;padding:6px 14px;
-              font-family:Inter,sans-serif;font-size:13px;font-weight:600;color:#e6ecff;
-              border:1px solid rgba(255,255,255,.08);}}
-    </style></head><body>
-    <div style="position:relative;">
-      <div id="viewer"></div>
-      <div class="ctrl">
-        <button class="btn" onclick="setStyle('cartoon')">Cartoon</button>
-        <button class="btn" onclick="setStyle('stick')">Stick</button>
-        <button class="btn" onclick="setStyle('sphere')">Sphere</button>
-        <button class="btn" onclick="setStyle('surface')">Surface</button>
-        <button class="btn" onclick="viewer.spin(true)">Spin</button>
-        <button class="btn" onclick="viewer.spin(false)">Stop</button>
-      </div>
-      <div class="label">PDB: {pid} · drag to rotate · scroll to zoom</div>
-    </div>
-    <script>
-    let viewer=$3Dmol.createViewer(document.getElementById("viewer"),
-        {{backgroundColor:"#0b0f19"}});
-    $3Dmol.download("pdb:{pid}",viewer,{{}},function(){{
-        viewer.setStyle({{}},{{cartoon:{{colorscheme:"ssJmol"}}}});
-        viewer.zoomTo(); viewer.render();
-    }});
-    function setStyle(s){{
-        viewer.setStyle({{}},{{}});
-        if(s==="cartoon") viewer.setStyle({{}},{{cartoon:{{colorscheme:"ssJmol"}}}});
-        else if(s==="stick") viewer.setStyle({{}},{{stick:{{colorscheme:"rasmol"}}}});
-        else if(s==="sphere") viewer.setStyle({{}},{{sphere:{{colorscheme:"rasmol",radius:.8}}}});
-        else if(s==="surface"){{
-            viewer.setStyle({{}},{{cartoon:{{colorscheme:"ssJmol"}}}});
-            viewer.addSurface($3Dmol.SurfaceType.VDW,{{opacity:.55,colorscheme:"whiteCarbon"}});
-        }}
-        viewer.render();
-    }}
-    </script></body></html>
-    """
-    stc.html(html,height=510)
-
-# ══════════════════════════════════════════════════════════════════════════════
-# AI EXPLAINER
-# ══════════════════════════════════════════════════════════════════════════════
-def get_client():
-    if not GROQ: return None
+def get_groq():
+    if not GROQ or not GROQ_KEY: return None
     try: return Groq(api_key=GROQ_KEY)
     except: return None
 
-def explain(df,question=""):
-    client=get_client()
-    if not client: return "❌ AI unavailable."
-    rows=df.head(5)[["Accession","Description","Identity (%)","E-Value","Bit Score"]].to_dict("records")
-    ctx="\n".join(f"  Hit {i}: {r['Accession']} — {r['Description']}\n"
-                  f"    Identity:{r['Identity (%)']}% E-Value:{r['E-Value']:.2e} Bit:{r['Bit Score']:.1f}"
-                  for i,r in enumerate(rows,1))
-    sys=textwrap.dedent("""You are an expert bioinformatician. Explain BLAST results to a graduate biologist.
-        (1) One-paragraph summary. (2) Bullet interpretation of top 3 hits. (3) Flags (contamination,paralogs).
-        (4) One next-step recommendation. Under 350 words.""")
-    prompt=f"BLAST results:\n{ctx}"+( f"\n\nUser question: {question}" if question.strip() else "")+"\n\nExplain."
+def ai_explain_blast(df:pd.DataFrame, q:str="") -> str:
+    c = get_groq()
+    if not c: return "❌ AI unavailable — add GROQ_API_KEY to .streamlit/secrets.toml"
+    rows = df.head(5)[["Accession","Description","Identity (%)","E-Value","Bit Score"]].to_dict("records")
+    ctx  = "\n".join(
+        f"  {i}. {r['Accession']} | {r['Description'][:70]}\n"
+        f"     Identity {r['Identity (%)']}%  E-Value {r['E-Value']:.2e}  Bit {r['Bit Score']:.1f}"
+        for i,r in enumerate(rows,1)
+    )
+    sys = ("You are an expert bioinformatician. Given BLAST results, provide:\n"
+           "1. Concise biological interpretation (2-3 sentences)\n"
+           "2. Top 3 hit significance (bullet points)\n"
+           "3. Red flags (contamination, paralogs, low coverage)\n"
+           "4. Recommended next step\n"
+           "Limit 400 words. Use markdown formatting.")
+    prompt = f"BLAST top hits:\n{ctx}" + (f"\n\nUser question: {q}" if q.strip() else "") + "\n\nExplain."
     try:
-        r=get_client().chat.completions.create(model="llama3-70b-8192",
+        r = c.chat.completions.create(model="llama3-70b-8192",
             messages=[{"role":"system","content":sys},{"role":"user","content":prompt}],
-            temperature=.3,max_tokens=600)
+            temperature=.3, max_tokens=700)
         return r.choices[0].message.content
     except Exception as e: return f"❌ {e}"
 
-def ai_widget(df,key):
+def ai_widget(df:pd.DataFrame, key:str):
     if df.empty: return
-    st.markdown("---"); st.markdown("### 🤖 AI Explainer")
-    q=st.text_input("Follow-up question",placeholder="Is this contamination?",key=f"q_{key}")
-    if st.button("✨ Explain results",key=f"ab_{key}"):
-        with st.spinner("Thinking…"): ans=explain(df,q)
-        st.session_state[f"ai_{key}"]=ans
+    divider("AI Analysis")
+    q = st.text_input("Ask a follow-up question (optional)",
+                      placeholder="e.g. Is this contamination? What do these E-values mean?",
+                      key=f"q_{key}")
+    if st.button("✨ AI Interpret Results", key=f"ab_{key}"):
+        with st.spinner("Analysing with LLaMA 3…"):
+            ans = ai_explain_blast(df, q)
+        st.session_state[f"ai_{key}"] = ans
     if f"ai_{key}" in st.session_state:
-        with st.chat_message("assistant",avatar="🧬"):
+        with st.chat_message("assistant", avatar="🧬"):
             st.markdown(st.session_state[f"ai_{key}"])
 
 # ══════════════════════════════════════════════════════════════════════════════
-# GC / SEQ PROFILE  (used in GC Dashboard)
+# 3D PROTEIN VIEWER
 # ══════════════════════════════════════════════════════════════════════════════
-def profile(seq_str,sid="seq"):
+def protein_3d_viewer(pdb_id:str, height:int=500):
+    pid = pdb_id.strip().upper()
+    if not pid or len(pid) != 4:
+        st.warning("Enter a valid 4-character PDB ID"); return
+    html = f"""<!DOCTYPE html><html><head>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script src="https://3Dmol.csb.pitt.edu/build/3Dmol-min.js"></script>
+<style>
+  *{{margin:0;padding:0;box-sizing:border-box;}}
+  body{{background:#0b0f19;font-family:Inter,sans-serif;}}
+  #v{{width:100%;height:{height}px;border-radius:14px;overflow:hidden;
+      box-shadow:0 4px 32px rgba(0,0,0,.6),0 0 40px rgba(124,156,255,.06);}}
+  .ctrl{{position:absolute;top:10px;right:10px;z-index:10;display:flex;gap:5px;flex-wrap:wrap;}}
+  .b{{background:rgba(18,24,38,.9);border:1px solid rgba(124,156,255,.22);border-radius:7px;
+      padding:4px 11px;font-size:11px;font-weight:600;color:#7c9cff;cursor:pointer;
+      backdrop-filter:blur(10px);transition:all .15s;}}
+  .b:hover{{background:rgba(124,156,255,.18);color:#e6ecff;border-color:#7c9cff;}}
+  .lbl{{position:absolute;bottom:10px;left:10px;background:rgba(18,24,38,.88);
+        backdrop-filter:blur(10px);border-radius:9px;padding:5px 12px;
+        font-size:12px;font-weight:600;color:#e6ecff;border:1px solid rgba(255,255,255,.08);}}
+  .info{{position:absolute;bottom:10px;right:10px;background:rgba(18,24,38,.88);
+         backdrop-filter:blur(10px);border-radius:9px;padding:5px 12px;
+         font-size:11px;color:#9aa4c7;border:1px solid rgba(255,255,255,.06);}}
+</style></head><body>
+<div style="position:relative;">
+  <div id="v"></div>
+  <div class="ctrl">
+    <button class="b" onclick="ss('cartoon')">Cartoon</button>
+    <button class="b" onclick="ss('stick')">Stick</button>
+    <button class="b" onclick="ss('sphere')">Sphere</button>
+    <button class="b" onclick="ss('line')">Line</button>
+    <button class="b" onclick="addSurf()">Surface</button>
+    <button class="b" onclick="v.spin(true)">⟳ Spin</button>
+    <button class="b" onclick="v.spin(false)">■ Stop</button>
+    <button class="b" onclick="v.zoomTo()">⊙ Reset</button>
+  </div>
+  <div class="lbl">PDB: {pid}  ·  drag rotate  ·  scroll zoom  ·  right-drag translate</div>
+  <div class="info" id="info">Loading…</div>
+</div>
+<script>
+let v=$3Dmol.createViewer(document.getElementById("v"),{{backgroundColor:"#0b0f19",antialias:true}});
+let loaded=false;
+$3Dmol.download("pdb:{pid}",v,{{}},function(){{
+  v.setStyle({{}},{{cartoon:{{colorscheme:"ssJmol"}}}});
+  v.zoomTo();v.render();loaded=true;
+  document.getElementById("info").textContent="PDB {pid} loaded";
+  setTimeout(()=>document.getElementById("info").style.opacity="0",3000);
+}});
+function ss(s){{
+  if(!loaded)return;
+  v.setStyle({{}},{{}});
+  if(s==="cartoon")v.setStyle({{}},{{cartoon:{{colorscheme:"ssJmol"}}}});
+  else if(s==="stick")v.setStyle({{}},{{stick:{{colorscheme:"rasmol"}}}});
+  else if(s==="sphere")v.setStyle({{}},{{sphere:{{colorscheme:"rasmol",radius:.6}}}});
+  else if(s==="line")v.setStyle({{}},{{line:{{colorscheme:"ssJmol"}}}});
+  v.render();
+}}
+function addSurf(){{
+  if(!loaded)return;
+  v.addSurface($3Dmol.SurfaceType.VDW,{{opacity:.5,colorscheme:"whiteCarbon"}});
+  v.render();
+}}
+</script></body></html>"""
+    stc.html(html, height=height+10)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SEQUENCE ANALYSIS
+# ══════════════════════════════════════════════════════════════════════════════
+def detect_seq_type(seq):
+    s = seq.upper().replace(" ","")
+    if not s: return "Unknown"
+    if set(s) <= set("ATGCN"): return "DNA"
+    if set(s) <= set("AUGCN"): return "RNA"
+    if set(s) <= set("ACDEFGHIKLMNPQRSTVWY*X"): return "Protein"
+    return "DNA"
+
+def seq_analysis(raw):
+    clean = re.sub(r">.*\n?","",raw); clean = re.sub(r"\s","",clean).upper()
+    if not clean: return {}
+    st_ = detect_seq_type(clean); n = len(clean)
+    counts = {c:clean.count(c) for c in set(clean)}
+    try:
+        mw = molecular_weight(Seq(clean), seq_type="DNA" if st_ in("DNA","RNA") else "protein")
+    except: mw = None
+    r = {"seq":clean,"type":st_,"length":n,"counts":counts,"mw":mw,"gc":None,"at":None,"tm":None}
+    if st_ == "DNA":
+        gc = clean.count("G") + clean.count("C")
+        at = clean.count("A") + clean.count("T")
+        r["gc"] = round(gc/n*100,2); r["at"] = round(at/n*100,2)
+        r["tm"] = round(4*gc+2*at,1) if n < 30 else None
+    return r
+
+def render_seq_analysis(info):
+    if not info: return
+    st_ = info["type"]
+    c1,c2,c3,c4 = st.columns(4)
+    c1.metric("Type",st_)
+    c2.metric("Length",f"{info['length']:,}" + (" bp" if st_!="Protein" else " aa"))
+    c3.metric("GC Content", f"{info['gc']}%" if info.get("gc") is not None else "—")
+    c4.metric("Mol. Weight", f"{info['mw']/1000:.2f} kDa" if info.get("mw") else "—")
+    if st_=="DNA":
+        cc1,cc2 = st.columns(2)
+        cc1.metric("AT Content",f"{info['at']}%")
+        cc2.metric("Tm (Wallace)",f"{info['tm']} °C" if info.get("tm") else "—")
+
+    divider()
+    cnt = info["counts"]
+    freq_df = pd.DataFrame({"Base":list(cnt.keys()),"Count":list(cnt.values())}).sort_values("Count",ascending=False)
+    CMAP = {"A":"#ff6b6b","T":PA,"G":SA,"C":"#ffd166","N":"#6b7280","U":"#ff9f43"}
+
+    fa,fb = st.columns(2)
+    with fa:
+        if st_ in("DNA","RNA"):
+            f = px.bar(freq_df,x="Base",y="Count",color="Base",
+                       color_discrete_map=CMAP,title="Nucleotide Frequency")
+        else:
+            f = px.bar(freq_df.head(20),x="Base",y="Count",
+                       color="Count",color_continuous_scale=GV,title="Amino Acid Frequency")
+        f.update_layout(showlegend=False,coloraxis_showscale=False)
+        st.plotly_chart(th(f,300), use_container_width=True)
+    with fb:
+        if st_ in("DNA","RNA") and len(freq_df)<=8:
+            fp = px.pie(freq_df,names="Base",values="Count",hole=.45,
+                        color="Base",color_discrete_map=CMAP,title="Base Composition")
+            fp.update_traces(textinfo="label+percent",
+                             marker=dict(line=dict(color=BG,width=2)))
+            st.plotly_chart(th(fp,300), use_container_width=True)
+        else:
+            f2 = px.bar(freq_df.head(20),y="Base",x="Count",orientation="h",
+                        color="Count",color_continuous_scale=GV,title="Frequency (horizontal)")
+            f2.update_layout(yaxis=dict(autorange="reversed"),coloraxis_showscale=False)
+            st.plotly_chart(th(f2,300), use_container_width=True)
+
+    if st_=="DNA" and info["length"]>100:
+        raw = info["seq"]; w = max(50,info["length"]//60)
+        sk,po=[],[]
+        for i in range(0,len(raw)-w,w//2):
+            ch=raw[i:i+w]; g,c=ch.count("G"),ch.count("C"); d=g+c
+            sk.append((g-c)/d if d else 0); po.append(i+w//2)
+        fg = px.area(x=po,y=sk,title="GC Skew  [(G−C)/(G+C)]",
+                     labels={"x":"Position (bp)","y":"GC Skew"},
+                     color_discrete_sequence=[PA])
+        fg.add_hline(y=0,line_dash="dot",line_color=SA,opacity=.4)
+        fg.update_traces(line_width=1.6,fillcolor="rgba(124,156,255,.08)")
+        st.plotly_chart(th(fg,260), use_container_width=True)
+
+    divider("Colourised Sequence Preview")
+    st.markdown(
+        f'<div class="seq-block">{colorize(info["seq"][:400])}'
+        f'{"<span style=\'color:#9aa4c7\'>  …</span>" if info["length"]>400 else ""}</div>',
+        unsafe_allow_html=True)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# GC PROFILE (for GC Dashboard)
+# ══════════════════════════════════════════════════════════════════════════════
+def profile_seq(seq_str, sid="seq"):
     s=seq_str.upper(); n=len(s)
     if not n: return {}
     cnt={b:s.count(b) for b in "ATGCN"}
@@ -736,477 +931,646 @@ def profile(seq_str,sid="seq"):
     return {"id":sid,"length":n,"gc":round(gc/n*100,2),"at":round(at/n*100,2),
             "cnt":cnt,"mw":mw,"tm":4*gc+2*at if n<30 else None,"raw":s}
 
-def gc_charts(p):
-    pie=pd.DataFrame({"Base":list("ATGCN"),"Count":[p["cnt"][b] for b in "ATGCN"]})
-    pie=pie[pie["Count"]>0]
-    f=px.pie(pie,names="Base",values="Count",hole=.42,color="Base",
-             color_discrete_map={"A":"#ef4444","T":"#3b82f6","G":"#22c55e","C":"#f59e0b","N":"#94a3b8"},
-             title="Base Composition",height=340)
-    f.update_traces(textinfo="label+percent",marker=dict(line=dict(color="white",width=2)))
-    c1,c2=st.columns([1,1.4])
-    with c1: st.plotly_chart(th(f),use_container_width=True)
-    with c2:
-        raw=p.get("raw","")
-        if raw:
-            w=max(50,len(raw)//50); skews,pos=[],[]
-            for i in range(0,len(raw)-w,w//2):
-                ch=raw[i:i+w]; g,c=ch.count("G"),ch.count("C"); d=g+c
-                skews.append((g-c)/d if d else 0); pos.append(i+w//2)
-            fs=px.area(x=pos,y=skews,title="GC Skew",
-                       labels={"x":"Position","y":"(G-C)/(G+C)"},height=340,
-                       color_discrete_sequence=["#7c9cff"])
-            fs.add_hline(y=0,line_dash="dot",line_color="rgba(124,156,255,.4)")
-            fs.update_traces(line=dict(width=1.8),fillcolor="rgba(124,156,255,.08)")
-            st.plotly_chart(th(fs),use_container_width=True)
-
 # ══════════════════════════════════════════════════════════════════════════════
-# CENTRAL DOGMA
+# PRIMER DESIGN
 # ══════════════════════════════════════════════════════════════════════════════
-def central_dogma(raw,table_id=1):
-    clean=re.sub(r">.*\n?","",raw); clean=re.sub(r"\s","",clean).upper()
-    bad=set(clean)-set("ATGCNRYSWKMBDHV")
-    if bad: raise ValueError(f"Invalid chars: {', '.join(sorted(bad))}")
-    s=Seq(clean)
-    return {"DNA 5'→3'":str(s),"Complement 3'→5'":str(s.complement()),
-            "Reverse Complement":str(s.reverse_complement()),
-            "mRNA":str(s.transcribe()),"Protein":str(s.translate(table=table_id))}
-
-# ══════════════════════════════════════════════════════════════════════════════
-# PRIMER DESIGNER
-# ══════════════════════════════════════════════════════════════════════════════
-def design_primers(raw,length=20):
-    s=re.sub(r"\s|>.*","",raw.upper()); s=re.sub(r"[^ATGCN]","",s)
-    if len(s)<length*2+20: raise ValueError(f"Need ≥{length*2+20} bp.")
+def design_primers(raw, length=20):
+    s = re.sub(r"\s|>.*","",raw.upper()); s = re.sub(r"[^ATGCN]","",s)
+    if len(s) < length*2+20: raise ValueError(f"Need ≥{length*2+20} bp.")
     def stats(seq,name):
-        gc=gc_fraction(Seq(seq))*100
-        try: tm_nn=Tm_NN(seq,nn_table=DNA_NN4)
-        except: tm_nn=None
-        try: tm_gc=Tm_GC(seq)
-        except: tm_gc=None
-        rc=str(Seq(seq).reverse_complement())
-        hp=any(seq[i:i+4]==rc[j:j+4] for i in range(len(seq)-3) for j in range(len(rc)-3))
-        km=[seq[i:i+4] for i in range(len(seq)-3)]
-        return{"name":name,"seq":seq,"len":len(seq),"gc":round(gc,1),
-               "tm_nn":round(tm_nn,1) if tm_nn else None,
-               "tm_gc":round(tm_gc,1) if tm_gc else None,"hairpin":hp,"dimer":len(km)!=len(set(km))}
-    return{"fwd":stats(s[:length],"Forward"),"rev":stats(str(Seq(s[-length:]).reverse_complement()),"Reverse"),"product":len(s)}
+        gc_pct = gc_fraction(Seq(seq))*100
+        try:    tm_nn = Tm_NN(seq,nn_table=DNA_NN4)
+        except: tm_nn = None
+        try:    tm_gc = Tm_GC(seq)
+        except: tm_gc = None
+        rc  = str(Seq(seq).reverse_complement())
+        hp  = any(seq[i:i+4]==rc[j:j+4] for i in range(len(seq)-3) for j in range(len(rc)-3))
+        km  = [seq[i:i+4] for i in range(len(seq)-3)]
+        return {"name":name,"seq":seq,"len":len(seq),"gc":round(gc_pct,1),
+                "tm_nn":round(tm_nn,1) if tm_nn else None,
+                "tm_gc":round(tm_gc,1) if tm_gc else None,
+                "hairpin":hp,"dimer":len(km)!=len(set(km))}
+    return {
+        "fwd":  stats(s[:length],"Forward"),
+        "rev":  stats(str(Seq(s[-length:]).reverse_complement()),"Reverse"),
+        "product": len(s),
+    }
 
 def primer_card(p):
-    ok=not p["hairpin"] and not p["dimer"]
-    issues="✅ No issues" if ok else " · ".join(filter(None,["⚠️ Hairpin" if p["hairpin"] else "","⚠️ Self-dimer" if p["dimer"] else ""]))
-    col="#4fffb0" if ok else "#ff6b6b"
-    st.markdown(f"""<div class="gc">
+    ok   = not p["hairpin"] and not p["dimer"]
+    flag = "✅ No issues" if ok else " · ".join(
+        filter(None,["⚠️ Hairpin" if p["hairpin"] else "",
+                     "⚠️ Self-dimer" if p["dimer"] else ""]))
+    col  = "#34d399" if ok else "#ff6b6b"
+    st.markdown(f"""
+    <div class="gc">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
-        <b>{p['name']} Primer</b>
-        <span style="font-size:.75rem;font-weight:600;color:{col};">{issues}</span></div>
-      <div class="seq-block" style="margin-bottom:12px;">{colorize(p['seq'])}</div>
+        <b style="color:{TM};">{p['name']} Primer</b>
+        <span style="font-size:.75rem;font-weight:600;color:{col};">{flag}</span>
+      </div>
+      <div class="seq-block" style="margin-bottom:14px;">{colorize(p['seq'])}</div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;font-size:.82rem;">
-        <div><span style="color:#9aa4c7;">Length</span><br><b>{p['len']} bp</b></div>
-        <div><span style="color:#9aa4c7;">GC</span><br><b>{p['gc']}%</b></div>
-        <div><span style="color:#9aa4c7;">Tm (NN)</span><br><b>{"N/A" if not p['tm_nn'] else f"{p['tm_nn']} °C"}</b></div>
-        <div><span style="color:#9aa4c7;">Tm (GC)</span><br><b>{"N/A" if not p['tm_gc'] else f"{p['tm_gc']} °C"}</b></div>
-      </div></div>""",unsafe_allow_html=True)
+        <div><span style="color:{TF};">Length</span><br><b>{p['len']} bp</b></div>
+        <div><span style="color:{TF};">GC%</span><br><b>{p['gc']}%</b></div>
+        <div><span style="color:{TF};">Tm (NN)</span><br><b>{"—" if not p['tm_nn'] else f"{p['tm_nn']} °C"}</b></div>
+        <div><span style="color:{TF};">Tm (GC)</span><br><b>{"—" if not p['tm_gc'] else f"{p['tm_gc']} °C"}</b></div>
+      </div>
+    </div>""", unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
-# HOME — clickable card grid
+# PAGES
 # ══════════════════════════════════════════════════════════════════════════════
-TOOLS=[
-    ("seqana", "🔬","Seq Analyzer",  "rose",  "Length, MW, GC%, frequency charts — pre-BLAST"),
-    ("xml",    "📄","XML Parser",    "violet","Upload BLAST XML → sortable table + CSV/Excel/FASTA"),
-    ("blast",  "🌐","Online BLAST",  "sky",   "Submit FASTA → live NCBI qblast"),
-    ("batch",  "📦","Batch",         "teal",  "Multi-file FASTA → combined ZIP results"),
-    ("ai",     "🤖","AI Explainer",  "amber", "LLaMA 3 explains top hits plainly"),
-    ("dogma",  "🔀","Central Dogma", "pink",  "DNA → mRNA → Protein translation"),
-    ("gc",     "📊","GC Dashboard",  "green", "GC%, composition, skew profiling"),
-    ("phylo",  "🌿","Phylo Viewer",  "orange","Render Newick / NEXUS phylo trees"),
-    ("primer", "🔬","Primer Design", "blue",  "Auto-design primers with Tm & hairpin check"),
-    ("prot3d", "🧊","3D Protein",    "rose",  "Interactive 3D protein structure viewer"),
-]
 
-def home():
-    st.markdown("""
-    <div style="text-align:center;padding:48px 0 40px;">
-      <div style="font-size:2.8rem;margin-bottom:14px;
-                  filter:drop-shadow(0 0 24px rgba(124,156,255,.4));">🧬</div>
-      <h1 style="margin:0 0 8px;font-size:2.2rem!important;
-                 background:linear-gradient(90deg,#7c9cff,#00e0ff);
-                 -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-                 background-clip:text;letter-spacing:-.5px;">BLAST BioSuite</h1>
-      <p style="color:#9aa4c7;margin:0;font-size:.95rem;letter-spacing:.2px;">
-        Minimal · Futuristic · Intelligent bioinformatics
-      </p>
-    </div>""",unsafe_allow_html=True)
+# ─── NCBI BLAST ───────────────────────────────────────────────────────────────
+def page_blast():
+    need_bio()
+    section_header("🌐","NCBI BLAST","Full NCBI qblast with all programs & databases","violet")
 
-    for row_start in range(0,len(TOOLS),5):
-        row=TOOLS[row_start:row_start+5]
-        cols=st.columns(len(row))
-        for col,(pid,icon,title,acc,desc) in zip(cols,row):
-            ct,cbg,cb,cbh=ACCENT[acc]
-            with col:
-                st.markdown(f"""
-                <div style="
-                  background:rgba(18,24,38,.72);
-                  backdrop-filter:blur(20px) saturate(130%);
-                  border:1px solid rgba(255,255,255,.08);
-                  border-radius:18px;padding:22px 18px 14px;
-                  box-shadow:0 4px 24px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.04);
-                  transition:all .22s ease;margin-bottom:0;
-                " onmouseover="this.style.borderColor='{cbh}';this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 36px rgba(0,0,0,.5),0 0 20px {cb}'"
-                  onmouseout="this.style.borderColor='rgba(255,255,255,.08)';this.style.transform='';this.style.boxShadow='0 4px 24px rgba(0,0,0,.4)'">
-                  <div style="
-                    width:42px;height:42px;border-radius:12px;
-                    background:{cbg};border:1px solid {cb};
-                    display:flex;align-items:center;justify-content:center;
-                    font-size:1.25rem;margin-bottom:12px;
-                    box-shadow:0 0 16px {cb};">{icon}</div>
-                  <div style="font-weight:700;color:#e6ecff;font-size:.88rem;
-                              margin-bottom:5px;letter-spacing:-.1px;">{title}</div>
-                  <div style="font-size:.74rem;color:#9aa4c7;line-height:1.45;
-                              margin-bottom:14px;">{desc}</div>
-                </div>""",unsafe_allow_html=True)
-                if st.button("Open",key=f"nav_{pid}",use_container_width=True): go(pid)
-        st.markdown("<div style='margin-bottom:6px'></div>",unsafe_allow_html=True)
+    # ── INPUT ──────────────────────────────────────────────────────────────
+    with st.container():
+        st.markdown('<div class="gc">', unsafe_allow_html=True)
 
-# ══════════════════════════════════════════════════════════════════════════════
-# PAGE: SEQUENCE ANALYZER (pre-BLAST)
-# ══════════════════════════════════════════════════════════════════════════════
+        # Sequence input
+        seq_col, opt_col = st.columns([3,2])
+        with seq_col:
+            st.markdown("#### 1 · Sequence Input")
+            raw_seq = st.text_area(
+                "Paste FASTA or raw sequence",
+                height=180,
+                placeholder=">my_sequence\nATGCGTACGTAGCTAGCTATATATGCGATCGATCGATCGAGCTAGC…",
+                key="blast_seq_input",
+            )
+            up = st.file_uploader("…or upload FASTA file",
+                                  type=["fasta","fa","fna","faa","txt"],key="blast_up")
+            if up: raw_seq = up.read().decode()
+
+            # Auto-detect + preview
+            if raw_seq.strip():
+                info = seq_analysis(raw_seq)
+                if info:
+                    badges = f'<span class="badge bv">{info["type"]}</span> '
+                    badges += f'<span class="badge bs">{info["length"]:,} {"bp" if info["type"]!="Protein" else "aa"}</span> '
+                    if info.get("gc") is not None:
+                        badges += f'<span class="badge bg">GC {info["gc"]}%</span> '
+                    st.markdown(badges, unsafe_allow_html=True)
+
+        with opt_col:
+            st.markdown("#### 2 · Program & Database")
+            prog = st.selectbox("BLAST Program",
+                list(PROGRAMS.keys()),
+                format_func=lambda k: f"{k}  —  {PROGRAMS[k][0]}",
+                key="blast_prog")
+            st.caption(PROGRAMS[prog][1])
+
+            db_group = "Protein" if prog in("blastp","tblastn") else "Nucleotide"
+            db_choices = DATABASES[db_group]
+            db = st.selectbox("Database", db_choices, key="blast_db")
+
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # ── ADVANCED PARAMETERS ──────────────────────────────────────────────
+    with st.expander("⚙️ Advanced Parameters", expanded=False):
+        ac1,ac2,ac3,ac4 = st.columns(4)
+        with ac1: hitlist = st.slider("Max hits",     5,500,50,5,key="blast_hits")
+        with ac2: expect  = st.select_slider("E-value threshold",
+                                [1e-100,1e-50,1e-20,1e-10,1e-5,.001,.01,.1,1,10,100],
+                                value=10.0,key="blast_ev")
+        with ac3:
+            ws_opts = WORD_SIZES.get(prog,[11])
+            word_sz = st.selectbox("Word size",ws_opts,index=len(ws_opts)//2,key="blast_ws")
+        with ac4:
+            matrix = "BLOSUM62"
+            if prog not in("blastn","megablast","dc-megablast"):
+                matrix = st.selectbox("Scoring matrix",MATRICES,key="blast_mat")
+
+        bc1,bc2,bc3 = st.columns(3)
+        with bc1: filter_lc = st.checkbox("Filter low-complexity", True, key="blast_fl")
+        with bc2: mask_lower = st.checkbox("Mask lowercase",       False,key="blast_ml")
+        with bc3: entrez_q  = st.text_input("Entrez query (filter)",
+                                placeholder="e.g. Homo sapiens[Organism]",key="blast_eq")
+
+        sc1,sc2 = st.columns(2)
+        with sc1: gap_open  = st.slider("Gap open cost",  0,25,11,1,key="blast_go")
+        with sc2: gap_ext   = st.slider("Gap extend cost",0,10, 1,1,key="blast_ge")
+
+    # ── QUICK SEQ ANALYSIS ────────────────────────────────────────────────
+    if raw_seq.strip():
+        with st.expander("🔬 Quick Sequence Profile", expanded=False):
+            render_seq_analysis(seq_analysis(raw_seq))
+
+    # ── SUBMIT ────────────────────────────────────────────────────────────
+    btn_cols = st.columns([2,1,1])
+    with btn_cols[0]:
+        submit = st.button("🚀  Run BLAST on NCBI",
+                           disabled=not raw_seq.strip(),
+                           use_container_width=True,
+                           key="blast_submit")
+    with btn_cols[1]:
+        if st.button("🗑 Clear Results",use_container_width=True,key="blast_clear"):
+            st.session_state.blast_results = None; st.rerun()
+    with btn_cols[2]:
+        st.caption("⏳ Typical: 30–120 sec on NCBI")
+
+    if submit:
+        seq_clean = raw_seq.strip()
+        with st.spinner(f"Running **{prog}** vs **{db}** on NCBI servers…"):
+            try:
+                df = run_blast_ncbi(seq_clean, prog, db, hitlist, expect,
+                                    word_sz if word_sz else 0, matrix, filter_lc, entrez_q)
+                st.session_state.blast_results = {"df":df,"prog":prog,"db":db,"seq":seq_clean[:80]}
+                save_history(seq_clean, prog, db, len(df))
+            except Exception as e:
+                st.error(f"BLAST failed: {e}"); return
+
+    # ── RESULTS ───────────────────────────────────────────────────────────
+    res = st.session_state.blast_results
+    if res is None: return
+    df = res["df"]
+
+    if df.empty:
+        st.warning("No significant hits returned. Try increasing E-value threshold or switching database.")
+        return
+
+    # Summary bar
+    st.markdown(f"""
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;
+                background:rgba(18,24,38,.7);border:1px solid {BD};border-radius:12px;
+                padding:14px 20px;margin:8px 0 16px;">
+      <span style="color:{TF};font-size:.8rem;margin-right:4px;">Results for
+        <code style="color:{PA};">{res['prog']}</code> vs
+        <code style="color:{SA};">{res['db']}</code></span>
+      <span class="badge bv">{len(df):,} HSPs</span>
+      <span class="badge bs">{df['Accession'].nunique()} unique hits</span>
+      <span class="badge bg">Best E: {df['E-Value'].min():.2e}</span>
+      <span class="badge ba">Max Identity: {df['Identity (%)'].max():.1f}%</span>
+      <span class="badge bt">Max Coverage: {df['Query Coverage (%)'].max():.1f}%</span>
+    </div>""", unsafe_allow_html=True)
+
+    # Metric row
+    m1,m2,m3,m4,m5 = st.columns(5)
+    m1.metric("Total HSPs",         f"{len(df):,}")
+    m2.metric("Unique Hits",        df["Accession"].nunique())
+    m3.metric("Best E-Value",       f"{df['E-Value'].min():.2e}")
+    m4.metric("Max Identity",       f"{df['Identity (%)'].max():.1f}%")
+    m5.metric("Max Coverage",       f"{df['Query Coverage (%)'].max():.1f}%")
+
+    # Tabs
+    tabs_labels = ["📋 Results Table","📊 Visualizations","🤖 AI Analysis"]
+    if res["prog"] == "blastp":
+        tabs_labels.append("🧊 3D Structure")
+    tabs = st.tabs(tabs_labels)
+
+    with tabs[0]: blast_table(df,"blast")
+    with tabs[1]: blast_charts(df)
+    with tabs[2]: ai_widget(df,"blast")
+    if res["prog"] == "blastp" and len(tabs) > 3:
+        with tabs[3]:
+            st.markdown("#### Interactive 3D Protein Structure")
+            st.caption("Enter a PDB ID from the results above to visualise the 3D structure.")
+            pdb_id = st.text_input("PDB ID (4 characters)",
+                                   placeholder="e.g. 1HHO",
+                                   max_chars=4, key="blast_pdb")
+            if pdb_id.strip(): protein_3d_viewer(pdb_id.strip())
+
+    # ── XML PARSER ─────────────────────────────────────────────────────────
+    divider("Upload Saved XML")
+    with st.expander("📄 Parse previously saved BLAST XML (outfmt 5)", expanded=False):
+        up_xml = st.file_uploader("Upload BLAST XML", type=["xml"], key="xml_up")
+        if up_xml:
+            with st.spinner("Parsing…"):
+                df_xml = parse_xml(up_xml.read())
+            if df_xml.empty:
+                st.error("No hits found.")
+            else:
+                st.success(f"✅ {len(df_xml):,} HSPs loaded from XML")
+                t1,t2,t3 = st.tabs(["📋 Table","📊 Charts","🤖 AI"])
+                with t1: blast_table(df_xml,"xml")
+                with t2: blast_charts(df_xml)
+                with t3: ai_widget(df_xml,"xml")
+
+
+# ─── SEQUENCE ANALYSER ────────────────────────────────────────────────────────
 def page_seqana():
     need_bio()
-    page_header("🔬","Sequence Analyzer","rose")
-    st.markdown("Paste or upload your sequence for a quick profile before running BLAST.")
-
-    c1,c2=st.columns([2,1])
+    section_header("🔬","Sequence Analyzer","Length · GC · Frequency · Skew — before you BLAST","rose")
+    c1,c2 = st.columns([3,1])
     with c1:
-        raw=st.text_area("Paste sequence (FASTA or raw)",height=160,
-                          placeholder=">my_seq\nATGCGTACGTAGCTAGCTAGCT…")
-        fu=st.file_uploader("…or upload FASTA",type=["fasta","fa","fna","faa","txt"],key="sa_up")
-        if fu: raw=fu.read().decode()
+        raw = st.text_area("Paste FASTA or raw sequence",height=180,
+                           placeholder=">gene\nATGCGTACGT…", key="sa_input")
+        fu  = st.file_uploader("…or upload FASTA",
+                               type=["fasta","fa","fna","faa","txt"],key="sa_up")
+        if fu: raw = fu.read().decode()
     with c2:
-        st.markdown('<div class="gc-sm" style="margin-top:0"><b style="font-size:.85rem;">What this shows</b><br>'
-                    '<ul style="font-size:.78rem;color:#9aa4c7;margin:6px 0 0;padding-left:16px;line-height:1.8">'
-                    '<li>Sequence length &amp; molecular weight</li>'
-                    '<li>GC / AT content</li>'
-                    '<li>Melting temperature (short seqs)</li>'
-                    '<li>Nucleotide / AA frequency bar chart</li>'
-                    '<li>Base composition pie chart</li>'
-                    '<li>GC skew profile (DNA)</li>'
-                    '</ul></div>',unsafe_allow_html=True)
+        st.markdown("""
+        <div class="gc-sm">
+        <b style="font-size:.85rem;color:#e6ecff;">This tool shows</b>
+        <ul style="font-size:.77rem;color:#9aa4c7;margin:8px 0 0;padding-left:15px;line-height:1.85;">
+          <li>Auto-detects DNA / RNA / Protein</li>
+          <li>Length &amp; molecular weight</li>
+          <li>GC%, AT%, Melting temp (Tm)</li>
+          <li>Nucleotide/AA frequency chart</li>
+          <li>Base composition pie</li>
+          <li>GC skew sliding window</li>
+          <li>Colour-coded sequence preview</li>
+        </ul></div>""", unsafe_allow_html=True)
+
+        with st.expander("Multi-FASTA"):
+            st.caption("Upload a multi-FASTA to get a summary table for all sequences.")
+            mup = st.file_uploader("Multi-FASTA",type=["fasta","fa","fna"],key="sa_multi")
+            if mup:
+                txt   = mup.read().decode()
+                recs  = list(SeqIO.parse(io.StringIO(txt),"fasta"))
+                if recs:
+                    rows = []
+                    for r in recs[:50]:
+                        p = seq_analysis(f">{r.id}\n{str(r.seq)}")
+                        rows.append({"ID":r.id,"Length":p["length"],
+                                     "GC%":p["gc"],"AT%":p["at"],
+                                     "MW(kDa)":round(p["mw"]/1000,2) if p.get("mw") else None})
+                    mdf = pd.DataFrame(rows)
+                    st.dataframe(mdf,use_container_width=True,height=280)
+                    st.download_button("⬇️ CSV",csv_bytes(mdf),"multifasta_stats.csv",
+                                       "text/csv",use_container_width=True)
 
     if raw.strip():
-        info=seq_analysis(raw)
+        info = seq_analysis(raw)
         if info: render_seq_analysis(info)
         else: st.error("Could not parse sequence.")
 
-    with st.expander("💡 Example sequences"):
-        st.code(">BRCA1_partial\nATGGATTTATCTGCTCTTCGCGTTGAAGAAGTACAAAATGTCATTAATGCTATGCAGAAAATCTTAGAGTGTCCCATCTGTCTGGAGTTGATCAAGGAACCTGTCTCC",language="text")
+    with st.expander("💡 Example: BRCA1 partial"):
+        st.code(">BRCA1_exon2_partial\n"
+                "ATGGATTTATCTGCTCTTCGCGTTGAAGAAGTACAAAATGTCATTAATGCTATGCAGAAAATCTTAG"
+                "AGTGTCCCATCTGTCTGGAGTTGATCAAGGAACCTGTCTCC", language="text")
 
-# ══════════════════════════════════════════════════════════════════════════════
-# PAGE: XML PARSER
-# ══════════════════════════════════════════════════════════════════════════════
-def page_xml():
-    need_bio()
-    page_header("📄","BLAST XML Parser","violet")
-    up=st.file_uploader("Upload BLAST XML (outfmt 5)",type=["xml"])
-    if not up: return
-    with st.spinner("Parsing…"): df=parse_xml(up.read())
-    if df.empty: st.error("No hits found."); return
-    st.success(f"✅ {len(df):,} HSPs · {df['Query ID'].nunique()} queries")
-    c1,c2,c3,c4=st.columns(4)
-    c1.metric("HSPs",f"{len(df):,}"); c2.metric("Queries",df["Query ID"].nunique())
-    c3.metric("Unique Hits",df["Accession"].nunique()); c4.metric("Best E-Value",f"{df['E-Value'].min():.2e}")
-    t1,t2,t3=st.tabs(["📋 Table","📊 Charts","🤖 AI"])
-    with t1: blast_table(df,"xml")
-    with t2: blast_charts(df)
-    with t3: ai_widget(df,"xml")
 
-# ══════════════════════════════════════════════════════════════════════════════
-# PAGE: ONLINE BLAST
-# ══════════════════════════════════════════════════════════════════════════════
-def page_blast():
-    need_bio()
-    page_header("🌐","Online NCBI BLAST","sky")
-    st.warning("⏳ 30–120 seconds on NCBI servers.",icon="⚠️")
-    c1,c2=st.columns(2)
-    with c1: prog=st.selectbox("Program",["blastn","blastp","blastx","tblastn","tblastx"])
-    with c2: db=st.selectbox("Database",["nt","nr","swissprot","refseq_rna","refseq_protein"])
-    seq=st.text_area("FASTA",height=140,placeholder=">seq\nATGCGT…")
-    fu=st.file_uploader("…or upload FASTA",type=["fasta","fa","fna","faa","txt"])
-    if fu: seq=fu.read().decode()
-
-    # Pre-BLAST analysis inline
-    if seq.strip():
-        with st.expander("🔬 Quick Sequence Profile",expanded=False):
-            info=seq_analysis(seq)
-            if info: render_seq_analysis(info)
-
-    if st.button("🚀 Submit to NCBI",disabled=not seq.strip()):
-        with st.spinner(f"Running {prog}…"):
-            try: df=run_blast(seq.strip(),prog,db)
-            except Exception as e: st.error(f"Failed: {e}"); return
-        if df.empty: st.warning("No hits returned."); return
-        st.success(f"✅ {len(df):,} HSPs")
-        c1,c2,c3=st.columns(3)
-        c1.metric("Unique Hits",df["Accession"].nunique())
-        c2.metric("Best E-Value",f"{df['E-Value'].min():.2e}")
-        c3.metric("Max Identity",f"{df['Identity (%)'].max():.1f}%")
-        t1,t2,t3,t4=st.tabs(["📋 Table","📊 Charts","🤖 AI","🧊 3D Structure"])
-        with t1: blast_table(df,"ob")
-        with t2: blast_charts(df)
-        with t3: ai_widget(df,"online")
-        with t4:
-            if prog=="blastp":
-                st.markdown("#### Interactive 3D Protein Viewer")
-                pdb=st.text_input("PDB ID from results",placeholder="e.g. 1HHO",max_chars=4)
-                if pdb: protein_3d_viewer(pdb)
-            else:
-                st.info("3D structure viewer is available for blastp results only.")
-
-# ══════════════════════════════════════════════════════════════════════════════
-# PAGE: BATCH PROCESSOR
-# ══════════════════════════════════════════════════════════════════════════════
-def page_batch():
-    need_bio()
-    page_header("📦","Batch FASTA Processor","teal")
-    st.warning("One NCBI query per file — 5 files ≈ 5–10 min.",icon="⚠️")
-    c1,c2=st.columns(2)
-    with c1: bp=st.selectbox("Program",["blastn","blastp","blastx"],key="bp")
-    with c2: bd=st.selectbox("Database",["nt","nr","swissprot"],key="bd")
-    files=st.file_uploader("Upload FASTA files",type=["fasta","fa","fna","faa"],accept_multiple_files=True)
-    if not files: return
-    st.info(f"📁 {len(files)} file(s) queued.")
-    if st.button(f"▶️ Run Batch ({len(files)} files)"):
-        all_dfs,fdfs=[],{}; prg=st.progress(0,"Starting…"); st_=st.empty()
-        for i,f in enumerate(files):
-            seq=f.read().decode("utf-8","replace")
-            st_.markdown(f"⏳ **{f.name}** ({i+1}/{len(files)})…")
-            try:
-                dfi=run_blast(seq,bp,bd); dfi.insert(0,"Source File",f.name)
-                fdfs[f.name]=dfi; all_dfs.append(dfi)
-                st_.success(f"✅ `{f.name}` → {len(dfi):,} HSPs")
-            except Exception as e: st_.error(f"❌ {f.name}: {e}")
-            prg.progress((i+1)/len(files),f"{i+1}/{len(files)}")
-        prg.empty(); st_.empty()
-        if not all_dfs: st.error("All queries failed."); return
-        combined=pd.concat(all_dfs,ignore_index=True)
-        st.success(f"🎉 {len(combined):,} HSPs from {len(all_dfs)} queries.")
-        smry=combined.groupby("Source File").agg(
-            HSPs=("Max Score","count"),Hits=("Accession","nunique"),
-            BestE=("E-Value","min"),MaxIdent=("Identity (%)","max")).reset_index().round(4)
-        st.dataframe(smry,use_container_width=True)
-        d1,d2,d3=st.columns(3)
-        with d1: st.download_button("⬇️ Combined CSV",csv_bytes(combined),"batch.csv","text/csv")
-        with d2:
-            if XLSX: st.download_button("⬇️ Excel",excel_bytes(combined),"batch.xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-        with d3:
-            zbuf=io.BytesIO()
-            with zipfile.ZipFile(zbuf,"w",zipfile.ZIP_DEFLATED) as zf:
-                for fn,dfi in fdfs.items(): zf.writestr(Path(fn).stem+"_blast.csv",dfi.to_csv(index=False))
-            zbuf.seek(0)
-            st.download_button("📦 Download ZIP",zbuf.getvalue(),"batch.zip","application/zip")
-        st.markdown("---"); blast_charts(combined); ai_widget(combined,"batch")
-
-# ══════════════════════════════════════════════════════════════════════════════
-# PAGE: AI EXPLAINER (standalone)
-# ══════════════════════════════════════════════════════════════════════════════
-def page_ai():
-    page_header("🤖","AI Explainer","amber")
-    if not GROQ: st.error("Run `pip install groq`"); return
-    if not GROQ_KEY: st.warning("⚠️ GROQ_API_KEY not found.")
-    up=st.file_uploader("Upload BLAST XML",type=["xml"])
-    if up:
-        need_bio()
-        with st.spinner("Parsing…"): df=parse_xml(up.read())
-        if df.empty: st.error("No hits found."); return
-        st.success(f"✅ {len(df):,} HSPs loaded.")
-        st.dataframe(df.head(5)[[c for c in DISPLAY_COLS if c in df.columns]],use_container_width=True)
-        ai_widget(df,"standalone")
-    st.markdown("---"); st.markdown("### 💬 Ask a question")
-    if "chat" not in st.session_state: st.session_state.chat=[]
-    for m in st.session_state.chat:
-        with st.chat_message(m["role"],avatar="🧬" if m["role"]=="assistant" else "🧑‍🔬"):
-            st.markdown(m["content"])
-    if prompt:=st.chat_input("Ask about BLAST, sequences, biology…"):
-        st.session_state.chat.append({"role":"user","content":prompt})
-        with st.chat_message("user",avatar="🧑‍🔬"): st.markdown(prompt)
-        c=get_client()
-        if c:
-            with st.chat_message("assistant",avatar="🧬"):
-                with st.spinner("…"):
-                    try:
-                        msgs=[{"role":"system","content":"You are an expert bioinformatician."}]+st.session_state.chat
-                        r=c.chat.completions.create(model="llama3-70b-8192",messages=msgs,max_tokens=500,temperature=.3)
-                        ans=r.choices[0].message.content
-                    except Exception as e: ans=f"❌ {e}"
-                    st.markdown(ans)
-                    st.session_state.chat.append({"role":"assistant","content":ans})
-
-# ══════════════════════════════════════════════════════════════════════════════
-# PAGE: CENTRAL DOGMA
-# ══════════════════════════════════════════════════════════════════════════════
+# ─── CENTRAL DOGMA ────────────────────────────────────────────────────────────
 def page_dogma():
     need_bio()
-    page_header("🔀","Central Dogma Tool","pink")
-    c1,c2=st.columns([2,1])
-    with c1: dna=st.text_area("DNA sequence",height=150,placeholder=">gene\nATGCGT…")
+    section_header("🔀","Central Dogma","DNA → Complement → mRNA → Protein","pink")
+    c1,c2 = st.columns([3,1])
+    with c1:
+        dna = st.text_area("DNA sequence (FASTA or raw)",height=150,placeholder=">gene\nATGCGT…")
     with c2:
-        tbl=st.selectbox("Genetic code",list(TABLES.keys()))
-        show_rc=st.checkbox("Reverse Complement",True)
-        show_rna=st.checkbox("mRNA",True); show_aa=st.checkbox("Protein",True)
-    if st.button("🔀 Translate",disabled=not dna.strip()):
+        tbl    = st.selectbox("Genetic code",list(TABLES.keys()))
+        show_rc  = st.checkbox("Reverse Complement",True)
+        show_rna = st.checkbox("mRNA",True)
+        show_prot= st.checkbox("Protein",True)
+        show_aa  = st.checkbox("AA frequency chart",True)
+
+    if st.button("🔀 Translate & Transcribe",disabled=not dna.strip()):
         try:
-            res=central_dogma(dna,TABLES[tbl])
-            gc_=round(gc_fraction(Seq(res["DNA 5'→3'"]))*100,1)
-            st.markdown(f'<div style="display:flex;gap:8px;margin:10px 0 16px;flex-wrap:wrap;">'
-                        f'<span class="badge bv">{len(res["DNA 5\'→3\'"])} bp</span>'
-                        f'<span class="badge bg">GC {gc_}%</span>'
-                        f'<span class="badge bs">{tbl}</span></div>',unsafe_allow_html=True)
+            clean = re.sub(r">.*\n?","",dna); clean=re.sub(r"\s","",clean).upper()
+            bad = set(clean)-set("ATGCNRYSWKMBDHV")
+            if bad: raise ValueError(f"Invalid characters: {', '.join(sorted(bad))}")
+            s = Seq(clean); table_id = TABLES[tbl]
+            res={
+                "DNA 5'→3'":           str(s),
+                "Complement 3'→5'":    str(s.complement()),
+                "Reverse Complement":  str(s.reverse_complement()),
+                "mRNA":                str(s.transcribe()),
+                "Protein":             str(s.translate(table=table_id)),
+            }
+            gc_ = round(gc_fraction(s)*100,1)
+            st.markdown(
+                f'<div style="display:flex;gap:8px;margin:10px 0 16px;flex-wrap:wrap;">'
+                f'<span class="badge bv">{len(clean)} bp</span>'
+                f'<span class="badge bg">GC {gc_}%</span>'
+                f'<span class="badge bs">{tbl}</span></div>',
+                unsafe_allow_html=True)
             st.markdown(seq_block(res["DNA 5'→3'"],"DNA 5'→3'","bv"),unsafe_allow_html=True)
             st.markdown(seq_block(res["Complement 3'→5'"],"Complement 3'→5'","bs"),unsafe_allow_html=True)
-            if show_rc: st.markdown(seq_block(res["Reverse Complement"],"Reverse Complement","bt"),unsafe_allow_html=True)
-            if show_rna: st.markdown(seq_block(res["mRNA"],"mRNA","ba"),unsafe_allow_html=True)
-            if show_aa:
-                prot=res["Protein"]
-                st.markdown(f'<span class="badge bp">Protein</span><div class="seq-block" style="margin-top:6px;color:#00e0ff;letter-spacing:.15em">{prot}</div>',unsafe_allow_html=True)
-                adf=pd.Series(list(prot.replace("*",""))).value_counts().reset_index(); adf.columns=["AA","Count"]
-                f=px.bar(adf.head(15),x="AA",y="Count",color="Count",color_continuous_scale=GV,
-                         title="Amino Acid Frequency",height=260); f.update_layout(coloraxis_showscale=False)
-                st.plotly_chart(th(f),use_container_width=True)
+            if show_rc:   st.markdown(seq_block(res["Reverse Complement"],"Reverse Complement","bt"),unsafe_allow_html=True)
+            if show_rna:  st.markdown(seq_block(res["mRNA"],"mRNA","ba"),unsafe_allow_html=True)
+            if show_prot:
+                prot = res["Protein"]
+                stops = prot.count("*")
+                st.markdown(
+                    f'<span class="badge bp">Protein</span>'
+                    f'<span style="font-size:.75rem;color:{TF};margin-left:8px;">{len(prot)-stops} aa · {stops} stop codons</span>'
+                    f'<div class="seq-block" style="margin-top:6px;color:#ff6b6b;letter-spacing:.15em">{prot}</div>',
+                    unsafe_allow_html=True)
+            if show_aa and show_prot:
+                adf = pd.Series(list(res["Protein"].replace("*",""))).value_counts().reset_index()
+                adf.columns=["AA","Count"]
+                f   = px.bar(adf.head(20),x="AA",y="Count",color="Count",
+                             color_continuous_scale=GV,title="Amino Acid Composition")
+                f.update_layout(coloraxis_showscale=False)
+                st.plotly_chart(th(f,280),use_container_width=True)
+
+            # Downloads
+            fasta_out = ">DNA\n" + res["DNA 5'\u21923'"] + "\n>mRNA\n" + res["mRNA"] + "\n>protein\n" + res["Protein"]
+            st.download_button("⬇️ Download FASTA (DNA + mRNA + Protein)",
+                fasta_out.encode(), "central_dogma.fasta","text/plain",use_container_width=False)
         except ValueError as e: st.error(f"Error: {e}")
 
-# ══════════════════════════════════════════════════════════════════════════════
-# PAGE: GC DASHBOARD
-# ══════════════════════════════════════════════════════════════════════════════
+    with st.expander("💡 Demo — TP53 fragment"):
+        st.code(">TP53_partial\nATGGAGGAGCCGCAGTCAGATCCTAGCGTTGAATGAGAGGAATTTGAGGGAGCCGTGGGTGGG",language="text")
+
+
+# ─── GC DASHBOARD ─────────────────────────────────────────────────────────────
 def page_gc():
     need_bio()
-    page_header("📊","GC Content Dashboard","green")
-    up=st.file_uploader("Upload FASTA",type=["fasta","fa","fna","txt"])
-    manual=st.text_area("…or paste raw DNA",height=90,placeholder="ATGCGATCGATCG…")
-    seqs=[]
+    section_header("📊","GC Content Dashboard","Composition · Skew · Multi-sequence comparison","green")
+    up = st.file_uploader("Upload FASTA (single or multi)",type=["fasta","fa","fna","txt"])
+    manual = st.text_area("…or paste raw DNA",height=90,placeholder="ATGCGATCGATCG…")
+
+    seqs = []
     if up:
-        txt=up.read().decode("utf-8","replace")
-        recs=list(SeqIO.parse(io.StringIO(txt),"fasta"))
-        if recs: seqs=[(r.id,str(r.seq)) for r in recs[:20]]
+        txt  = up.read().decode("utf-8","replace")
+        recs = list(SeqIO.parse(io.StringIO(txt),"fasta"))
+        if recs: seqs = [(r.id,str(r.seq)) for r in recs[:30]]
         else:
-            raw=re.sub(r"\s","",txt.upper())
-            if re.match(r"^[ATGCN]+$",raw): seqs=[("uploaded",raw)]
+            raw2 = re.sub(r"\s","",txt.upper())
+            if re.match(r"^[ATGCN]+$",raw2): seqs=[("uploaded",raw2)]
     elif manual.strip():
         seqs=[("manual",re.sub(r"\s","",manual).upper())]
     if not seqs: return
-    profiles=[profile(s,sid) for sid,s in seqs]
-    st.success(f"✅ {len(profiles)} sequence(s) loaded.")
-    sel=st.selectbox("Sequence",[p["id"] for p in profiles]) if len(profiles)>1 else profiles[0]["id"]
-    p=next(x for x in profiles if x["id"]==sel)
-    c1,c2,c3,c4=st.columns(4)
-    c1.metric("Length",f"{p['length']:,} bp"); c2.metric("GC%",f"{p['gc']}%")
-    c3.metric("AT%",f"{p['at']}%"); c4.metric("MW",f"{p['mw']/1000:.1f} kDa" if p['mw'] else "N/A")
-    gc_charts(p)
+
+    profiles = [profile_seq(s,sid) for sid,s in seqs]
+    st.success(f"✅ {len(profiles)} sequence(s) loaded")
+
+    sel = st.selectbox("Select sequence",[p["id"] for p in profiles]) if len(profiles)>1 else profiles[0]["id"]
+    p   = next(x for x in profiles if x["id"]==sel)
+
+    c1,c2,c3,c4,c5 = st.columns(5)
+    c1.metric("Length",   f"{p['length']:,} bp")
+    c2.metric("GC%",      f"{p['gc']}%")
+    c3.metric("AT%",      f"{p['at']}%")
+    c4.metric("MW",       f"{p['mw']/1000:.1f} kDa" if p['mw'] else "—")
+    c5.metric("Tm",       f"{p['tm']} °C" if p['tm'] else "—")
+
+    CMAP={"A":"#ff6b6b","T":PA,"G":SA,"C":"#ffd166","N":"#6b7280"}
+    pie=pd.DataFrame({"Base":list("ATGCN"),"Count":[p["cnt"][b] for b in "ATGCN"]})
+    pie=pie[pie["Count"]>0]
+
+    ca,cb2 = st.columns(2)
+    with ca:
+        fp=px.pie(pie,names="Base",values="Count",hole=.45,color="Base",
+                  color_discrete_map=CMAP,title="Base Composition")
+        fp.update_traces(textinfo="label+percent",marker=dict(line=dict(color=BG,width=2)))
+        st.plotly_chart(th(fp,340),use_container_width=True)
+    with cb2:
+        raw3=p.get("raw",""); w=max(50,len(raw3)//60); sk,po=[],[]
+        for i in range(0,len(raw3)-w,w//2):
+            ch=raw3[i:i+w]; g,c=ch.count("G"),ch.count("C"); d=g+c
+            sk.append((g-c)/d if d else 0); po.append(i+w//2)
+        fs=px.area(x=po,y=sk,title="GC Skew",labels={"x":"Position (bp)","y":"(G-C)/(G+C)"},
+                   color_discrete_sequence=[PA])
+        fs.add_hline(y=0,line_dash="dot",line_color=SA,opacity=.4)
+        fs.update_traces(fillcolor="rgba(124,156,255,.08)",line_width=1.6)
+        st.plotly_chart(th(fs,340),use_container_width=True)
+
     if len(profiles)>1:
-        st.markdown("### Summary")
-        sdf=pd.DataFrame([{"ID":x["id"],"Len":x["length"],"GC%":x["gc"],"AT%":x["at"],"MW(kDa)":round(x["mw"]/1000,1) if x["mw"] else None} for x in profiles])
+        divider("All Sequences")
+        sdf=pd.DataFrame([{"ID":x["id"],"Len(bp)":x["length"],"GC%":x["gc"],"AT%":x["at"],
+                           "MW(kDa)":round(x["mw"]/1000,1) if x["mw"] else None} for x in profiles])
         st.dataframe(sdf,use_container_width=True)
-        st.download_button("⬇️ CSV",csv_bytes(sdf),"gc_summary.csv","text/csv")
+        fb=px.bar(sdf,x="ID",y="GC%",color="GC%",color_continuous_scale=GV,title="GC% Comparison")
+        fb.update_layout(coloraxis_showscale=False,xaxis_tickangle=25)
+        st.plotly_chart(th(fb,280),use_container_width=True)
+        st.download_button("⬇️ Summary CSV",csv_bytes(sdf),"gc_summary.csv","text/csv")
 
-# ══════════════════════════════════════════════════════════════════════════════
-# PAGE: PHYLO VIEWER
-# ══════════════════════════════════════════════════════════════════════════════
-def page_phylo():
-    need_bio()
-    page_header("🌿","Phylogenetic Tree Viewer","orange")
-    c1,c2=st.columns([2,1])
-    with c1: up=st.file_uploader("Upload tree file",type=["nwk","tree","dnd","nex","nexus","txt"])
-    with c2: fmt=st.selectbox("Format",["newick","nexus","nexml","phyloxml"])
-    if not up:
-        st.markdown('<div class="gc" style="text-align:center;padding:36px"><div style="font-size:2.5rem">🌿</div><div style="color:#9aa4c7">Upload a Newick or NEXUS tree file</div></div>',unsafe_allow_html=True)
-        with st.expander("Example Newick"):
-            st.code("((Homo_sapiens:0.12,Pan_troglodytes:0.08):0.05,(Mus_musculus:0.25,Rattus_norvegicus:0.22):0.10,Danio_rerio:0.45);")
-        return
-    try: tree=Phylo.read(io.StringIO(up.read().decode("utf-8","replace")),fmt)
-    except Exception as e: st.error(f"Cannot parse tree: {e}"); return
-    terms=tree.get_terminals()
-    fig,ax=plt.subplots(figsize=(12,max(5,len(terms)*.38)))
-    fig.patch.set_facecolor("#0b0f19"); ax.set_facecolor("#121826")
-    Phylo.draw(tree,axes=ax,do_show=False)
-    ax.tick_params(colors="#9aa4c7")
-    for sp in ax.spines.values(): sp.set_edgecolor("rgba(255,255,255,0.08)")
-    for ln in ax.get_lines(): ln.set_color("#7c9cff"); ln.set_alpha(.85); ln.set_linewidth(1.4)
-    for txt in ax.texts: txt.set_color("#e6ecff"); txt.set_fontsize(9)
-    ax.set_title("Phylogenetic Tree",color="#7c9cff",fontsize=14,pad=10)
-    ax.xaxis.label.set_color("#9aa4c7"); ax.yaxis.label.set_color("#9aa4c7")
-    plt.tight_layout()
-    st.pyplot(fig,use_container_width=True); plt.close(fig)
-    depths=[tree.distance(t) for t in terms]
-    c1,c2,c3=st.columns(3)
-    c1.metric("Terminal Taxa",len(terms)); c2.metric("Internal Nodes",len(tree.get_nonterminals()))
-    c3.metric("Max Depth",f"{max(depths):.4f}" if depths else "N/A")
 
-# ══════════════════════════════════════════════════════════════════════════════
-# PAGE: PRIMER DESIGNER
-# ══════════════════════════════════════════════════════════════════════════════
+# ─── PRIMER DESIGNER ──────────────────────────────────────────────────────────
 def page_primer():
     need_bio()
-    page_header("🔬","PCR Primer Designer","blue")
-    c1,c2=st.columns([2,1])
+    section_header("⚗️","PCR Primer Designer","Forward + Reverse · Tm · GC · Hairpin · Dimer","blue")
+    c1,c2 = st.columns([3,1])
     with c1:
-        seq=st.text_area("Target DNA",height=170,placeholder=">target\nATGCGT…")
-        fu=st.file_uploader("…or upload FASTA",type=["fasta","fa","fna","txt"],key="pfu")
-        if fu: seq=fu.read().decode()
+        seq = st.text_area("Target DNA",height=180,placeholder=">target\nATGCGT…")
+        fu  = st.file_uploader("…or upload FASTA",type=["fasta","fa","fna","txt"],key="pfu")
+        if fu: seq = fu.read().decode()
     with c2:
-        plen=st.slider("Primer length (bp)",15,30,20)
-        st.markdown('<div class="gc-sm"><div style="font-size:.78rem;color:#9aa4c7;line-height:1.8"><b style="color:#e6ecff;">Ideal specs</b><br>GC: 40–60% · Tm: 55–65 °C<br>ΔTm &lt; 5 °C · No hairpins</div></div>',unsafe_allow_html=True)
-    if st.button("🔬 Design Primers",disabled=not seq.strip()):
+        plen   = st.slider("Primer length (bp)",15,30,20)
+        st.markdown(f"""
+        <div class="gc-sm">
+        <div style="font-size:.78rem;color:{TF};line-height:1.85;">
+          <b style="color:{TM};">Ideal primer criteria</b><br>
+          GC: 40–60%<br>
+          Tm: 55–65 °C<br>
+          ΔTm &lt; 5 °C between pair<br>
+          No 3' hairpins / self-dimers<br>
+          No runs of ≥4 same base
+        </div></div>""",unsafe_allow_html=True)
+
+    if st.button("⚗️ Design Primers",disabled=not seq.strip(),use_container_width=False):
         try:
-            res=design_primers(seq,plen); c1,c2=st.columns(2)
-            with c1: primer_card(res["fwd"])
-            with c2: primer_card(res["rev"])
-            st.markdown(f'<div class="gc-sm" style="text-align:center"><span style="color:#9aa4c7;font-size:.82rem;">Product Size</span><br><b style="font-size:1.5rem;color:#7c9cff;">{res["product"]:,} bp</b></div>',unsafe_allow_html=True)
-            ft=res["fwd"]["tm_nn"] or res["fwd"]["tm_gc"] or 0
-            rt=res["rev"]["tm_nn"] or res["rev"]["tm_gc"] or 0
-            dtm=abs(ft-rt)
-            if dtm>5: st.warning(f"ΔTm = {dtm:.1f} °C (>5 °C may reduce efficiency)")
-            else: st.success(f"✅ ΔTm = {dtm:.1f} °C")
-        except ValueError as e: st.error(f"Error: {e}")
+            res = design_primers(seq,plen)
+            pc1,pc2 = st.columns(2)
+            with pc1: primer_card(res["fwd"])
+            with pc2: primer_card(res["rev"])
 
-# ══════════════════════════════════════════════════════════════════════════════
-# PAGE: 3D PROTEIN VIEWER
-# ══════════════════════════════════════════════════════════════════════════════
+            fwd_tm = res["fwd"]["tm_nn"] or res["fwd"]["tm_gc"] or 0
+            rev_tm = res["rev"]["tm_nn"] or res["rev"]["tm_gc"] or 0
+            dtm    = abs(fwd_tm-rev_tm)
+
+            st.markdown(
+                f'<div class="gc-sm" style="text-align:center;margin:4px 0 12px;">'
+                f'<span style="color:{TF};font-size:.8rem;">Expected product</span><br>'
+                f'<b style="font-size:1.6rem;color:{PA};">{res["product"]:,} bp</b>'
+                f'</div>',unsafe_allow_html=True)
+
+            if dtm > 5: st.warning(f"ΔTm = {dtm:.1f} °C (>5 °C may reduce PCR efficiency)")
+            else:       st.success(f"✅ ΔTm = {dtm:.1f} °C — primer pair well matched")
+
+            # Comparison chart
+            fc = go.Figure()
+            for pp,col in [(res["fwd"],PA),(res["rev"],SA)]:
+                fc.add_trace(go.Bar(
+                    name=pp["name"],
+                    x=["Tm (NN)","GC (%)","Length/2"],
+                    y=[pp["tm_nn"] or 0, pp["gc"], pp["len"]/2],
+                    marker_color=col,opacity=.85))
+            fc.update_layout(barmode="group",title="Primer Property Comparison",height=270)
+            st.plotly_chart(th(fc),use_container_width=True)
+
+            # Download primers
+            primer_txt = (
+                f">Forward_primer\n{res['fwd']['seq']}\n"
+                f">Reverse_primer\n{res['rev']['seq']}\n"
+                f"\nProduct size: {res['product']} bp\n"
+                f"Fwd Tm (NN): {res['fwd']['tm_nn']} °C\n"
+                f"Rev Tm (NN): {res['rev']['tm_nn']} °C\n"
+            )
+            st.download_button("⬇️ Download Primers FASTA",
+                               primer_txt.encode(),"primers.fasta","text/plain")
+
+        except ValueError as e: st.error(f"Design error: {e}")
+
+    with st.expander("💡 Demo — GAPDH"):
+        st.code(">GAPDH_demo\nATGGGGAAGGTGAAGGTCGGAGTCAACGGATTTGGTCGTATTGGGCGCCTGGTCACCAGGGCTGCTTTTAACTCTGGTAAAGTGGATATTGTTGCCATCAATGACCCCTTCATTGACCTCAACTACATGGTCTACATGTTCCAGTATGACTCCACTCACGGCAAATTC",language="text")
+
+
+# ─── PHYLO VIEWER ─────────────────────────────────────────────────────────────
+def page_phylo():
+    need_bio()
+    section_header("🌿","Phylogenetic Tree Viewer","Newick · NEXUS · Phyloxml · Radial or Cladogram","orange")
+    uc1,uc2 = st.columns([3,1])
+    with uc1: up  = st.file_uploader("Upload tree file",type=["nwk","tree","dnd","nex","nexus","txt","xml"])
+    with uc2: fmt = st.selectbox("Format",["newick","nexus","nexml","phyloxml"])
+
+    if not up:
+        st.markdown(f'<div class="gc" style="text-align:center;padding:50px 20px;">'
+                    f'<div style="font-size:2.5rem;filter:drop-shadow(0 0 16px rgba(255,159,67,.3))">🌿</div>'
+                    f'<div style="color:{TF};margin-top:10px;">Upload a tree file to render</div>'
+                    f'</div>',unsafe_allow_html=True)
+        with st.expander("💡 Example Newick"):
+            st.code("((Homo_sapiens:0.12,Pan_troglodytes:0.08):0.05,(Mus_musculus:0.25,Rattus_norvegicus:0.22):0.10,(Danio_rerio:0.45,Xenopus_laevis:0.38):0.15);")
+        return
+
+    try:
+        tree = Phylo.read(io.StringIO(up.read().decode("utf-8","replace")),fmt)
+    except Exception as e: st.error(f"Cannot parse tree: {e}"); return
+
+    terms = tree.get_terminals()
+    fig,ax = plt.subplots(figsize=(14,max(6,len(terms)*.42)))
+    fig.patch.set_facecolor(BG); ax.set_facecolor(BG2)
+    Phylo.draw(tree,axes=ax,do_show=False)
+    ax.tick_params(colors=TF)
+    for sp in ax.spines.values(): sp.set_edgecolor(BD)
+    for ln in ax.get_lines(): ln.set_color(PA); ln.set_alpha(.85); ln.set_linewidth(1.4)
+    for txt in ax.texts: txt.set_color(TM); txt.set_fontsize(9)
+    ax.set_title(f"Phylogenetic Tree — {len(terms)} taxa",color=PA,fontsize=13,pad=10)
+    ax.xaxis.label.set_color(TF); ax.yaxis.label.set_color(TF)
+    plt.tight_layout()
+    st.pyplot(fig,use_container_width=True); plt.close(fig)
+
+    depths=[tree.distance(t) for t in terms]
+    c1,c2,c3,c4 = st.columns(4)
+    c1.metric("Terminal Taxa",   len(terms))
+    c2.metric("Internal Nodes",  len(tree.get_nonterminals()))
+    c3.metric("Max Depth",       f"{max(depths):.4f}" if depths else "—")
+    c4.metric("Total Branches",  len(list(tree.find_clades())))
+
+
+# ─── 3D PROTEIN ────────────────────────────────────────────────────────────────
 def page_prot3d():
-    page_header("🧊","3D Protein Structure","rose")
-    st.markdown("Enter a **PDB ID** to load the 3D structure. Drag to rotate, scroll to zoom.")
-    c1,c2=st.columns([1,2])
-    with c1:
-        pdb=st.text_input("PDB ID",placeholder="e.g. 1HHO",max_chars=4).strip().upper()
-        st.markdown("""
-        <div class="gc" style="margin-top:8px">
-          <div style="font-size:.78rem;color:#9aa4c7;line-height:1.8">
-            <b style="color:#e6ecff;">Common PDB IDs</b><br>
-            <code>1HHO</code> — Hemoglobin<br>
-            <code>4HHB</code> — Deoxy-hemoglobin<br>
-            <code>6LU7</code> — SARS-CoV-2 protease<br>
-            <code>1TUP</code> — p53 tumor suppressor<br>
-            <code>1CRN</code> — Crambin (small)<br>
-            <code>2LYZ</code> — Lysozyme
-          </div>
+    section_header("🧊","3D Protein Structure","Interactive py3Dmol · RCSB PDB","rose")
+    pc1,pc2 = st.columns([1,2])
+    with pc1:
+        pdb = st.text_input("PDB ID",placeholder="e.g. 1HHO",max_chars=4).strip().upper()
+        st.markdown(f"""
+        <div class="gc">
+          <b style="font-size:.82rem;color:{TM};">Popular PDB IDs</b>
+          <table style="width:100%;font-size:.76rem;margin-top:8px;border-collapse:collapse;">
+            {''.join(f"<tr><td><code>{i}</code></td><td style='color:{TF};padding-left:8px;'>{n}</td></tr>"
+                     for i,n in [("1HHO","Oxy-haemoglobin"),("4HHB","Deoxy-haemoglobin"),
+                                  ("6LU7","SARS-CoV-2 Mpro"),("1TUP","p53–DNA complex"),
+                                  ("2LYZ","Lysozyme"),("1CRN","Crambin"),
+                                  ("3NIR","Insulin"),("4EK3","GFP variant"),
+                                  ("1ATP","cAMP kinase"),("1AON","GroEL chaperonin")])}
+          </table>
         </div>""",unsafe_allow_html=True)
-        style=st.selectbox("Default style",["Cartoon","Stick","Sphere"])
-    with c2:
+        style_opt = st.radio("Default style",["Cartoon","Stick","Sphere","Line"],horizontal=True)
+    with pc2:
         if pdb and len(pdb)==4:
-            protein_3d_viewer(pdb)
+            protein_3d_viewer(pdb,560)
         else:
-            st.markdown('<div class="gc" style="text-align:center;padding:60px 20px"><div style="font-size:3rem;filter:drop-shadow(0 0 16px rgba(0,224,255,.3))">🧊</div><div style="color:#9aa4c7;margin-top:10px;font-size:.9rem;">Enter a 4-character PDB ID to load the 3D structure</div></div>',unsafe_allow_html=True)
+            st.markdown(f'<div class="gc" style="text-align:center;padding:80px 20px;">'
+                        f'<div style="font-size:3rem;filter:drop-shadow(0 0 20px rgba(252,165,165,.3))">🧊</div>'
+                        f'<div style="color:{TF};margin-top:12px;font-size:.9rem;">'
+                        f'Enter any 4-character PDB ID on the left<br>'
+                        f'<span style="font-size:.78rem;">Source: RCSB Protein Data Bank</span>'
+                        f'</div></div>',unsafe_allow_html=True)
+
+
+# ─── AI ASSISTANT ──────────────────────────────────────────────────────────────
+def page_ai():
+    section_header("🤖","AI Bioinformatics Assistant","LLaMA 3 70B via Groq · BLAST interpretation · Q&A","amber")
+
+    if not GROQ:
+        st.error("Install Groq: `pip install groq`"); return
+    if not GROQ_KEY:
+        st.warning("⚠️ Add `GROQ_API_KEY` to `.streamlit/secrets.toml` to enable AI features.")
+        return
+
+    # Upload XML for AI explanation
+    with st.expander("📊 Interpret a BLAST XML file", expanded=False):
+        up_xml = st.file_uploader("Upload BLAST XML",type=["xml"],key="ai_xml")
+        if up_xml:
+            need_bio()
+            with st.spinner("Parsing…"): df_ai = parse_xml(up_xml.read())
+            if not df_ai.empty:
+                st.success(f"✅ {len(df_ai):,} HSPs loaded")
+                st.dataframe(df_ai[["Accession","Description","Identity (%)","E-Value","Bit Score"]].head(10),
+                             use_container_width=True,height=260)
+                ai_widget(df_ai,"ai_upload")
+
+    divider("Chat")
+    # Chat interface
+    if not st.session_state.chat_history:
+        st.session_state.chat_history.append({
+            "role":"assistant",
+            "content":"Hello! I'm your AI bioinformatics assistant. Ask me anything about BLAST results, sequence analysis, molecular biology, or bioinformatics workflows.",
+        })
+
+    for m in st.session_state.chat_history:
+        with st.chat_message(m["role"], avatar="🧬" if m["role"]=="assistant" else "👤"):
+            st.markdown(m["content"])
+
+    if prompt := st.chat_input("Ask about BLAST, sequences, PCR, molecular biology…"):
+        st.session_state.chat_history.append({"role":"user","content":prompt})
+        with st.chat_message("user",avatar="👤"): st.markdown(prompt)
+        client = get_groq()
+        if client:
+            with st.chat_message("assistant",avatar="🧬"):
+                with st.spinner("Thinking…"):
+                    try:
+                        sys = ("You are an expert bioinformatician and molecular biologist. "
+                               "Be precise, cite evidence, use markdown. If asked about BLAST results, "
+                               "interpret them biologically. Keep answers focused and ≤400 words unless more is needed.")
+                        msgs = [{"role":"system","content":sys}] + st.session_state.chat_history
+                        r = client.chat.completions.create(
+                            model="llama3-70b-8192",messages=msgs,max_tokens=800,temperature=.3)
+                        ans = r.choices[0].message.content
+                    except Exception as e: ans = f"❌ {e}"
+                    st.markdown(ans)
+                    st.session_state.chat_history.append({"role":"assistant","content":ans})
+
+    # Clear chat
+    if len(st.session_state.chat_history) > 2:
+        if st.button("🗑 Clear conversation", key="clear_chat"):
+            st.session_state.chat_history = []
+            st.rerun()
+
+
+# ─── HISTORY ──────────────────────────────────────────────────────────────────
+def page_history():
+    section_header("📋","Search History","Your recent BLAST searches this session","teal")
+    hist = st.session_state.history
+
+    if not hist:
+        st.markdown(f'<div class="gc" style="text-align:center;padding:40px 20px;">'
+                    f'<div style="font-size:2rem">📋</div>'
+                    f'<div style="color:{TF};margin-top:8px;">No searches yet this session.</div>'
+                    f'</div>',unsafe_allow_html=True)
+        return
+
+    hdf = pd.DataFrame(hist[::-1])  # newest first
+    st.dataframe(hdf, use_container_width=True, height=420,
+        column_config={
+            "hits": st.column_config.NumberColumn("Hits"),
+            "time": st.column_config.TextColumn("Timestamp"),
+        })
+    st.download_button("⬇️ Export History CSV", csv_bytes(hdf),
+                       "blast_history.csv","text/csv")
+    if st.button("🗑 Clear History"):
+        st.session_state.history = []; st.rerun()
 
 # ══════════════════════════════════════════════════════════════════════════════
-# ROUTER
+# RENDER
 # ══════════════════════════════════════════════════════════════════════════════
-P=st.session_state.page
-if   P=="home":   home()
-elif P=="seqana": page_seqana()
-elif P=="xml":    page_xml()
-elif P=="blast":  page_blast()
-elif P=="batch":  page_batch()
-elif P=="ai":     page_ai()
-elif P=="dogma":  page_dogma()
-elif P=="gc":     page_gc()
-elif P=="phylo":  page_phylo()
-elif P=="primer": page_primer()
-elif P=="prot3d": page_prot3d()
-else: go("home")
+render_nav()
+
+P = st.session_state.page
+if   P == "blast":   page_blast()
+elif P == "seqana":  page_seqana()
+elif P == "dogma":   page_dogma()
+elif P == "gc":      page_gc()
+elif P == "primer":  page_primer()
+elif P == "phylo":   page_phylo()
+elif P == "prot3d":  page_prot3d()
+elif P == "ai":      page_ai()
+elif P == "history": page_history()
+else: go("blast")
+    
