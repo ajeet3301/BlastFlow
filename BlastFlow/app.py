@@ -294,6 +294,176 @@ hr{{border:none!important;border-top:1px solid var(--bd)!important;margin:1.2rem
 ::-webkit-scrollbar-track{{background:transparent;}}
 ::-webkit-scrollbar-thumb{{background:rgba(124,156,255,.2);border-radius:99px;}}
 ::-webkit-scrollbar-thumb:hover{{background:rgba(124,156,255,.4);}}
+
+/* ══ CRT SCANLINES ══ */
+.crt-overlay{{
+  position:fixed;inset:0;pointer-events:none;z-index:9998;
+  background:repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.06) 2px,
+    rgba(0,0,0,0.06) 4px
+  );
+  animation:scanroll 8s linear infinite;
+}}
+@keyframes scanroll{{
+  0%{{background-position:0 0;}}
+  100%{{background-position:0 400px;}}
+}}
+
+/* ══ VIGNETTE ══ */
+.vignette-overlay{{
+  position:fixed;inset:0;pointer-events:none;z-index:9997;
+  background:radial-gradient(
+    ellipse 85% 80% at 50% 50%,
+    transparent 55%,
+    rgba(0,0,0,0.55) 100%
+  );
+}}
+
+/* ══ PARTICLE CANVAS ══ */
+#particle-canvas{{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+}}
+
+/* ══ LIGHTNING ══ */
+#lightning-canvas{{
+  position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.65;
+}}
+
+/* ══ GLITCH TEXT ══ */
+.glitch{{
+  position:relative;
+  display:inline-block;
+  animation:glitch-base 5s infinite;
+}}
+.glitch::before,.glitch::after{{
+  content:attr(data-text);
+  position:absolute;inset:0;
+}}
+.glitch::before{{
+  color:#00e0ff;
+  clip-path:polygon(0 30%,100% 30%,100% 50%,0 50%);
+  animation:glitch-top 5s infinite;
+  left:2px;
+}}
+.glitch::after{{
+  color:#ff6b6b;
+  clip-path:polygon(0 55%,100% 55%,100% 75%,0 75%);
+  animation:glitch-bot 5s infinite;
+  left:-2px;
+}}
+@keyframes glitch-base{{
+  0%,90%,100%{{transform:none;opacity:1;}}
+  91%{{transform:skewX(-1deg);}}
+  93%{{transform:skewX(1deg) skewY(.5deg);}}
+  95%{{transform:none;}}
+  97%{{transform:skewX(2deg);opacity:.9;}}
+}}
+@keyframes glitch-top{{
+  0%,88%,100%{{transform:none;opacity:0;}}
+  89%{{transform:translate(-3px,0);opacity:.8;}}
+  91%{{transform:translate(3px,0);opacity:.6;}}
+  93%{{transform:none;opacity:0;}}
+}}
+@keyframes glitch-bot{{
+  0%,88%,100%{{transform:none;opacity:0;}}
+  90%{{transform:translate(3px,0);opacity:.7;}}
+  92%{{transform:translate(-3px,0);opacity:.5;}}
+  94%{{transform:none;opacity:0;}}
+}}
+
+/* ══ NAV — animated underline + status dot ══ */
+.nav-outer{{
+  position:sticky;top:0;z-index:9995;
+  background:rgba(11,15,25,0.94);
+  backdrop-filter:blur(28px) saturate(180%);
+  border-bottom:1px solid rgba(124,156,255,.12);
+  margin:0 -2rem 1.6rem;
+  box-shadow:0 1px 0 rgba(124,156,255,.08),0 4px 30px rgba(0,0,0,.6);
+}}
+.nav-inner{{
+  max-width:1280px;margin:0 auto;
+  padding:0 2rem;
+  display:flex;align-items:center;gap:0;
+}}
+.nav-brand{{
+  display:flex;align-items:center;gap:9px;
+  padding:14px 24px 14px 0;
+  border-right:1px solid rgba(255,255,255,.07);
+  margin-right:12px;flex-shrink:0;
+}}
+.nav-brand-text{{
+  font-weight:700;font-size:.95rem;letter-spacing:-.2px;
+  background:linear-gradient(90deg,{PA} 0%,{SA} 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}}
+.status-dot{{
+  width:7px;height:7px;border-radius:50%;
+  background:#34d399;
+  box-shadow:0 0 6px #34d399,0 0 12px rgba(52,211,153,.4);
+  animation:pulse-dot 2.4s ease-in-out infinite;flex-shrink:0;
+}}
+@keyframes pulse-dot{{
+  0%,100%{{transform:scale(1);opacity:1;}}
+  50%{{transform:scale(1.35);opacity:.7;}}
+}}
+.nav-links{{display:flex;align-items:stretch;flex:1;}}
+.nav-link{{
+  position:relative;
+  display:flex;align-items:center;gap:5px;
+  padding:14px 11px;
+  font-size:.81rem;font-weight:500;color:{TF};
+  cursor:pointer;white-space:nowrap;
+  border:none;background:none;
+  transition:color .15s;
+  text-decoration:none;
+}}
+.nav-link::after{{
+  content:'';
+  position:absolute;bottom:0;left:50%;right:50%;
+  height:2px;
+  background:linear-gradient(90deg,{PA},{SA});
+  border-radius:2px 2px 0 0;
+  transition:left .22s ease,right .22s ease;
+  box-shadow:0 0 8px {PA};
+}}
+.nav-link:hover{{color:{TM};}}
+.nav-link:hover::after{{left:8%;right:8%;}}
+.nav-link.active{{color:{PA};font-weight:700;}}
+.nav-link.active::after{{left:0;right:0;}}
+
+/* ══ FOOTER ══ */
+.site-footer{{
+  margin-top:60px;padding:28px 0 16px;
+  border-top:1px solid rgba(255,255,255,.06);
+  text-align:center;
+}}
+.site-footer p{{
+  font-family:'JetBrains Mono',monospace!important;
+  font-size:.72rem!important;color:rgba(124,156,255,.5)!important;
+  letter-spacing:.5px!important;margin:3px 0!important;
+}}
+.site-footer a{{color:rgba(124,156,255,.6)!important;text-decoration:none!important;}}
+.site-footer a:hover{{color:{PA}!important;}}
+
+/* ══ DIFFICULTY BADGES ══ */
+.diff-beginner{{
+  display:inline-block;padding:2px 9px;border-radius:4px;
+  font-size:.65rem;font-weight:700;letter-spacing:.6px;text-transform:uppercase;
+  background:rgba(52,211,153,.12);color:#34d399;border:1px solid rgba(52,211,153,.3);
+}}
+.diff-intermediate{{
+  display:inline-block;padding:2px 9px;border-radius:4px;
+  font-size:.65rem;font-weight:700;letter-spacing:.6px;text-transform:uppercase;
+  background:rgba(255,209,102,.12);color:#ffd166;border:1px solid rgba(255,209,102,.3);
+}}
+.diff-advanced{{
+  display:inline-block;padding:2px 9px;border-radius:4px;
+  font-size:.65rem;font-weight:700;letter-spacing:.6px;text-transform:uppercase;
+  background:rgba(255,107,107,.12);color:#ff6b6b;border:1px solid rgba(255,107,107,.3);
+}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -396,12 +566,13 @@ def seq_block(seq,label="",badge="bv"):
 
 def section_header(icon, title, subtitle="", accent="violet"):
     ct,cbg,cb,_ = ACCENT[accent]
+    sub_html = f'<div class="sec-sub">{subtitle}</div>' if subtitle else ""
     st.markdown(f"""
     <div class="sec-header">
       <div class="sec-icon" style="background:{cbg};border:1px solid {cb};--ic:{cb};">{icon}</div>
       <div>
-        <div class="sec-title">{title}</div>
-        {"" if not subtitle else f'<div class="sec-sub">{subtitle}</div>'}
+        <div class="sec-title glitch" data-text="{title}">{title}</div>
+        {sub_html}
       </div>
     </div>""", unsafe_allow_html=True)
 
@@ -424,30 +595,239 @@ def save_history(query, prog, db, n_hits):
 # ══════════════════════════════════════════════════════════════════════════════
 # NAV BAR  (rendered every run)
 # ══════════════════════════════════════════════════════════════════════════════
+def render_fx():
+    """Inject particle system + lightning canvas + CRT/vignette overlays via HTML component."""
+    stc.html("""
+<!DOCTYPE html><html><head><style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:transparent;overflow:hidden;}
+canvas{position:fixed;inset:0;pointer-events:none;}
+#ptc{z-index:0;}
+#ltc{z-index:1;opacity:.55;}
+#crt{z-index:9;pointer-events:none;position:fixed;inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.055) 2px,rgba(0,0,0,.055) 4px);}
+#vig{z-index:8;pointer-events:none;position:fixed;inset:0;
+  background:radial-gradient(ellipse 88% 82% at 50% 50%,transparent 50%,rgba(0,0,0,.62) 100%);}
+</style></head><body>
+<canvas id="ptc"></canvas>
+<canvas id="ltc"></canvas>
+<div id="crt"></div>
+<div id="vig"></div>
+<script>
+// ── PARTICLES ──────────────────────────────────────────────────────
+const pc = document.getElementById('ptc');
+const px = pc.getContext('2d');
+let W = pc.width  = window.innerWidth;
+let H = pc.height = window.innerHeight;
+let mx = W/2, my = H/2;
+
+const COLORS = [
+  'rgba(124,156,255,', 'rgba(0,224,255,',
+  'rgba(180,120,255,', 'rgba(255,107,200,',
+  'rgba(100,200,255,',
+];
+
+class Particle {
+  constructor() { this.reset(true); }
+  reset(init) {
+    this.x  = Math.random() * W;
+    this.y  = init ? Math.random() * H : H + 10;
+    this.vx = (Math.random() - .5) * .4;
+    this.vy = -(Math.random() * .8 + .3);
+    this.r  = Math.random() * 2.2 + .4;
+    this.a  = Math.random() * .6 + .15;
+    this.da = (Math.random() * .005 + .002) * (Math.random()<.5?1:-1);
+    this.col= COLORS[Math.floor(Math.random()*COLORS.length)];
+    this.pulse = Math.random() * Math.PI * 2;
+  }
+  update(parallaxX, parallaxY) {
+    this.pulse += .02;
+    this.x  += this.vx + parallaxX * .012;
+    this.y  += this.vy + parallaxY * .008;
+    this.a  += this.da;
+    if (this.a > .75 || this.a < .08) this.da *= -1;
+    if (this.y < -8 || this.x < -8 || this.x > W+8) this.reset(false);
+  }
+  draw() {
+    const glow = Math.sin(this.pulse) * .3 + .7;
+    px.beginPath();
+    px.arc(this.x, this.y, this.r * glow, 0, Math.PI*2);
+    px.fillStyle = this.col + this.a + ')';
+    px.fill();
+    // glow halo
+    const g = px.createRadialGradient(this.x,this.y,0,this.x,this.y,this.r*4*glow);
+    g.addColorStop(0, this.col + (this.a*.4) + ')');
+    g.addColorStop(1, this.col + '0)');
+    px.beginPath();
+    px.arc(this.x,this.y,this.r*4*glow,0,Math.PI*2);
+    px.fillStyle = g;
+    px.fill();
+  }
+}
+
+const particles = Array.from({length:120}, ()=>new Particle());
+let prlx = 0, prly = 0;
+document.addEventListener('mousemove', e => {
+  prlx = (e.clientX - W/2) / W;
+  prly = (e.clientY - H/2) / H;
+});
+
+function animParticles() {
+  px.clearRect(0,0,W,H);
+  particles.forEach(p => { p.update(prlx,prly); p.draw(); });
+  requestAnimationFrame(animParticles);
+}
+animParticles();
+
+// ── LIGHTNING ──────────────────────────────────────────────────────
+const lc = document.getElementById('ltc');
+const lx = lc.getContext('2d');
+lc.width  = W; lc.height = H;
+
+function bolt(x1,y1,x2,y2,rough,depth,ctx) {
+  if (depth <= 0) {
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+    return;
+  }
+  const mx2 = (x1+x2)/2 + (Math.random()-.5)*rough;
+  const my2 = (y1+y2)/2 + (Math.random()-.5)*rough;
+  bolt(x1,y1,mx2,my2,rough*.6,depth-1,ctx);
+  bolt(mx2,my2,x2,y2,rough*.6,depth-1,ctx);
+  // random branch
+  if (depth > 1 && Math.random() < .28) {
+    const bx = mx2 + (Math.random()-.5)*rough*2;
+    const by = my2 + rough*(Math.random()*.8+.2);
+    bolt(mx2,my2,bx,by,rough*.4,depth-2,ctx);
+  }
+}
+
+function flashLightning() {
+  lx.clearRect(0,0,W,H);
+  const strikes = Math.floor(Math.random()*2)+1;
+  for (let s=0;s<strikes;s++) {
+    const sx = Math.random()*W;
+    const ex = sx + (Math.random()-.5)*300;
+    // glow pass
+    lx.save();
+    lx.strokeStyle = 'rgba(180,140,255,.25)';
+    lx.lineWidth   = 6;
+    lx.shadowBlur  = 30;
+    lx.shadowColor = '#7c9cff';
+    bolt(sx,0,ex,H*.7+Math.random()*H*.3,220,7,lx);
+    // core pass
+    lx.strokeStyle = 'rgba(220,200,255,.9)';
+    lx.lineWidth   = 1;
+    lx.shadowBlur  = 12;
+    lx.shadowColor = '#00e0ff';
+    bolt(sx,0,ex,H*.7+Math.random()*H*.3,220,7,lx);
+    lx.restore();
+  }
+  // fade out
+  let fade = 1;
+  const fadeOut = setInterval(()=>{
+    fade -= .08;
+    lx.globalAlpha = Math.max(0,fade);
+    if (fade <= 0) { clearInterval(fadeOut); lx.clearRect(0,0,W,H); lx.globalAlpha=1; }
+  }, 30);
+}
+
+// trigger lightning every 4-10 seconds
+function scheduleLightning() {
+  flashLightning();
+  setTimeout(scheduleLightning, 4000 + Math.random()*6000);
+}
+setTimeout(scheduleLightning, 1500);
+
+// ── RESIZE ────────────────────────────────────────────────────────
+window.addEventListener('resize', ()=>{
+  W = pc.width  = lc.width  = window.innerWidth;
+  H = pc.height = lc.height = window.innerHeight;
+});
+</script></body></html>
+""", height=0, scrolling=False)
+
+
 def render_nav():
     cur = st.session_state.page
-    # Logo + buttons in one sticky row
-    st.markdown(f'<div class="nav-wrap"><span class="nav-logo">🧬 BLAST BioSuite Pro</span></div>',
-                unsafe_allow_html=True)
+    # Build nav link items HTML
+    links_html = ""
+    for pid, icon, label in NAV_ITEMS:
+        active_cls = " active" if pid == cur else ""
+        links_html += f'<span class="nav-link{active_cls}" data-pid="{pid}">{icon} {label}</span>'
+
+    st.markdown(f"""
+    <div class="nav-outer">
+      <div class="nav-inner">
+        <div class="nav-brand">
+          <div class="status-dot" title="NCBI Connected"></div>
+          <span class="nav-brand-text">🧬 BLAST BioSuite Pro</span>
+        </div>
+        <nav class="nav-links" id="nav-links">{links_html}</nav>
+      </div>
+    </div>
+    <style>
+    /* ensure Streamlit block-container sits below nav */
+    .main .block-container{{padding-top:.5rem!important;}}
+    </style>
+    """, unsafe_allow_html=True)
+
+    # Real routing buttons — styled to match nav visually but kept visible
+    # They sit right under the nav bar inside a tight row
+    st.markdown("""
+    <style>
+    /* Nav routing row — make buttons visually identical to nav links */
+    div.nav-btn-row > div[data-testid="column"] > div > div > div > div > button {
+        background:transparent!important;
+        border:none!important;
+        border-radius:0!important;
+        color:transparent!important;
+        font-size:0!important;
+        padding:0!important;height:2px!important;
+        width:100%!important;
+        box-shadow:none!important;
+        cursor:pointer!important;
+        position:absolute!important;
+        opacity:0!important;
+        pointer-events:all!important;
+    }
+    div.nav-btn-row{position:relative;height:0;overflow:visible;}
+    /* Stretch invisible buttons to cover the visual nav links above */
+    div.nav-btn-row > div[data-testid="column"]{
+        position:relative;
+    }
+    div.nav-btn-row > div[data-testid="column"] > div > div > div > div > button{
+        position:absolute!important;
+        top:-56px!important;
+        left:0!important;right:0!important;
+        height:56px!important;
+        opacity:0!important;
+    }
+    </style>
+    <div class="nav-btn-row">
+    """, unsafe_allow_html=True)
+
     cols = st.columns(len(NAV_ITEMS))
     for col, (pid, icon, label) in zip(cols, NAV_ITEMS):
         with col:
-            # Active page gets different style via inline CSS injection
-            is_active = pid == cur
-            if is_active:
-                st.markdown(f"""
-                <style>
-                div[data-testid="column"]:has(button[kind="secondary"][data-nav="{pid}"])
-                  button{{
-                    background:rgba(124,156,255,.18)!important;
-                    border-color:rgba(124,156,255,.4)!important;
-                    color:{PA}!important;font-weight:700!important;
-                  }}
-                </style>""", unsafe_allow_html=True)
-            clicked = st.button(f"{icon} {label}", key=f"nb_{pid}",
-                                use_container_width=True)
-            if clicked:
+            if st.button(f"{icon} {label}", key=f"nb_{pid}", use_container_width=True):
                 go(pid)
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+def render_footer():
+    st.markdown("""
+    <div class="site-footer">
+      <p>BLAST BioSuite Pro &nbsp;·&nbsp; Powered by NCBI qBLAST &nbsp;·&nbsp; Biopython &nbsp;·&nbsp; Groq LLaMA 3</p>
+      <p style="margin-top:6px!important;">
+        <a href="https://blast.ncbi.nlm.nih.gov" target="_blank">NCBI BLAST</a>
+        &nbsp;·&nbsp;
+        <a href="https://biopython.org" target="_blank">Biopython</a>
+        &nbsp;·&nbsp;
+        <a href="https://www.rcsb.org" target="_blank">RCSB PDB</a>
+      </p>
+    </div>
+    """, unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # BLAST CORE
@@ -1551,6 +1931,7 @@ def page_history():
 # ══════════════════════════════════════════════════════════════════════════════
 # RENDER
 # ══════════════════════════════════════════════════════════════════════════════
+render_fx()
 render_nav()
 
 P = st.session_state.page
@@ -1564,3 +1945,5 @@ elif P == "prot3d":  page_prot3d()
 elif P == "ai":      page_ai()
 elif P == "history": page_history()
 else: go("blast")
+
+render_footer()
