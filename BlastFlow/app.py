@@ -71,10 +71,10 @@ except: GROQ_KEY = os.environ.get("GROQ_API_KEY","")
 # ══════════════════════════════════════════════════════════════════════════════
 BG   = "#0b0f19"
 BG2  = "#121826"
-PA   = "#7c9cff"   # primary accent
-SA   = "#00e0ff"   # secondary accent
+PA   = "#c084fc"   # primary accent
+SA   = "#f472b6"   # secondary accent
 TM   = "#e6ecff"   # text main
-TF   = "#9aa4c7"   # text faded
+TF   = "#b8a4d4"   # text faded
 BD   = "rgba(255,255,255,0.08)"
 
 st.markdown(f"""
@@ -85,7 +85,7 @@ st.markdown(f"""
   --bg:{BG};--bg2:{BG2};--pa:{PA};--sa:{SA};--tm:{TM};--tf:{TF};
   --bd:{BD};--bh:rgba(255,255,255,0.15);
   --glass:rgba(18,24,38,0.75);--glass2:rgba(18,24,38,0.92);
-  --gp:rgba(124,156,255,0.15);--gs:rgba(0,224,255,0.12);
+  --gp:rgba(192,132,252,0.15);--gs:rgba(244,114,182,0.12);
   --font:'Inter',sans-serif;--mono:'JetBrains Mono',monospace;
 }}
 
@@ -96,9 +96,9 @@ html,body,[class*="css"],.stApp{{font-family:var(--font)!important;color:var(--t
 .stApp{{background:var(--bg)!important;}}
 .stApp::before{{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
   background:
-    radial-gradient(ellipse 60% 50% at 8% 10%,rgba(124,156,255,.055) 0%,transparent 65%),
-    radial-gradient(ellipse 50% 40% at 92% 80%,rgba(0,224,255,.05) 0%,transparent 65%),
-    radial-gradient(ellipse 30% 30% at 50% 55%,rgba(124,156,255,.025) 0%,transparent 65%);}}
+    radial-gradient(ellipse 60% 50% at 8% 10%,rgba(192,132,252,.055) 0%,transparent 65%),
+    radial-gradient(ellipse 50% 40% at 92% 80%,rgba(244,114,182,.05) 0%,transparent 65%),
+    radial-gradient(ellipse 30% 30% at 50% 55%,rgba(192,132,252,.025) 0%,transparent 65%);}}
 .main .block-container{{position:relative;z-index:1;}}
 
 /* ─ Nav bar wrapper ─ */
@@ -133,15 +133,15 @@ html,body,[class*="css"],.stApp{{font-family:var(--font)!important;color:var(--t
   white-space:nowrap!important;
 }}
 .stHorizontalBlock [data-testid="column"] > div > div > div > div > button:hover{{
-  background:rgba(124,156,255,.1)!important;
-  border-color:rgba(124,156,255,.2)!important;
+  background:rgba(192,132,252,.1)!important;
+  border-color:rgba(192,132,252,.2)!important;
   color:{TM}!important;
   transform:none!important;
 }}
 /* Active nav button - applied via class on parent */
 [data-nav-active="true"] button{{
-  background:rgba(124,156,255,.15)!important;
-  border-color:rgba(124,156,255,.3)!important;
+  background:rgba(192,132,252,.15)!important;
+  border-color:rgba(192,132,252,.3)!important;
   color:{PA}!important;
   font-weight:600!important;
 }}
@@ -153,7 +153,7 @@ html,body,[class*="css"],.stApp{{font-family:var(--font)!important;color:var(--t
 .sec-icon{{
   width:46px;height:46px;border-radius:13px;
   display:flex;align-items:center;justify-content:center;font-size:1.4rem;
-  box-shadow:0 0 20px var(--ic,rgba(124,156,255,.25));
+  box-shadow:0 0 20px var(--ic,rgba(192,132,252,.25));
 }}
 .sec-title{{font-size:1.65rem;font-weight:700;color:{TM};letter-spacing:-.3px;margin:0;}}
 .sec-sub{{font-size:.82rem;color:{TF};margin:2px 0 0;}}
@@ -183,8 +183,8 @@ h2{{font-size:1.15rem!important;font-weight:600!important;color:{PA}!important;}
 h3{{font-size:1rem!important;font-weight:600!important;color:{SA}!important;}}
 p,li{{color:{TM}!important;line-height:1.65!important;}}
 a{{color:{PA}!important;}}
-code,pre{{font-family:var(--mono)!important;background:rgba(124,156,255,.1)!important;
-  border:1px solid rgba(124,156,255,.2)!important;color:{PA}!important;border-radius:6px;font-size:.82rem!important;}}
+code,pre{{font-family:var(--mono)!important;background:rgba(192,132,252,.1)!important;
+  border:1px solid rgba(192,132,252,.2)!important;color:{PA}!important;border-radius:6px;font-size:.82rem!important;}}
 
 /* ─ Streamlit metric ─ */
 [data-testid="metric-container"]{{background:rgba(18,24,38,.8)!important;border:1px solid var(--bd)!important;
@@ -195,22 +195,22 @@ code,pre{{font-family:var(--mono)!important;background:rgba(124,156,255,.1)!impo
 
 /* ─ Buttons ─ */
 .stButton>button{{
-  background:linear-gradient(135deg,rgba(124,156,255,.15),rgba(0,224,255,.1))!important;
-  color:{PA}!important;border:1px solid rgba(124,156,255,.3)!important;
+  background:linear-gradient(135deg,rgba(192,132,252,.15),rgba(244,114,182,.1))!important;
+  color:{PA}!important;border:1px solid rgba(192,132,252,.3)!important;
   border-radius:10px!important;font-family:var(--font)!important;font-weight:600!important;
   font-size:.87rem!important;padding:.47rem 1.2rem!important;
   backdrop-filter:blur(8px)!important;transition:all .18s!important;}}
 .stButton>button:hover{{
-  background:linear-gradient(135deg,rgba(124,156,255,.28),rgba(0,224,255,.18))!important;
+  background:linear-gradient(135deg,rgba(192,132,252,.28),rgba(244,114,182,.18))!important;
   border-color:{PA}!important;color:#fff!important;
-  box-shadow:0 0 22px rgba(124,156,255,.3)!important;transform:translateY(-1px)!important;}}
+  box-shadow:0 0 22px rgba(192,132,252,.3)!important;transform:translateY(-1px)!important;}}
 [data-testid="stDownloadButton"]>button{{
-  background:linear-gradient(135deg,rgba(0,224,255,.12),rgba(124,156,255,.08))!important;
-  color:{SA}!important;border-color:rgba(0,224,255,.28)!important;}}
+  background:linear-gradient(135deg,rgba(244,114,182,.12),rgba(192,132,252,.08))!important;
+  color:{SA}!important;border-color:rgba(244,114,182,.28)!important;}}
 [data-testid="stDownloadButton"]>button:hover{{
-  background:linear-gradient(135deg,rgba(0,224,255,.25),rgba(124,156,255,.15))!important;
+  background:linear-gradient(135deg,rgba(244,114,182,.25),rgba(192,132,252,.15))!important;
   border-color:{SA}!important;color:#fff!important;
-  box-shadow:0 0 22px rgba(0,224,255,.28)!important;}}
+  box-shadow:0 0 22px rgba(244,114,182,.28)!important;}}
 
 /* ─ Inputs ─ */
 .stTextArea textarea,.stTextInput input{{
@@ -218,7 +218,7 @@ code,pre{{font-family:var(--mono)!important;background:rgba(124,156,255,.1)!impo
   border-radius:10px!important;color:{TM}!important;font-family:var(--font)!important;
   transition:border-color .18s,box-shadow .18s!important;}}
 .stTextArea textarea:focus,.stTextInput input:focus{{
-  border-color:rgba(124,156,255,.5)!important;box-shadow:0 0 0 3px rgba(124,156,255,.1)!important;}}
+  border-color:rgba(192,132,252,.5)!important;box-shadow:0 0 0 3px rgba(192,132,252,.1)!important;}}
 .stSelectbox>div>div,.stMultiSelect>div>div{{
   background:rgba(18,24,38,.88)!important;border:1px solid var(--bd)!important;
   border-radius:10px!important;color:{TM}!important;}}
@@ -227,9 +227,9 @@ code,pre{{font-family:var(--mono)!important;background:rgba(124,156,255,.1)!impo
 
 /* ─ File uploader ─ */
 [data-testid="stFileUploader"]{{background:rgba(18,24,38,.5)!important;
-  border:2px dashed rgba(124,156,255,.2)!important;border-radius:14px!important;}}
-[data-testid="stFileUploader"]:hover{{background:rgba(124,156,255,.05)!important;
-  border-color:rgba(124,156,255,.4)!important;}}
+  border:2px dashed rgba(192,132,252,.2)!important;border-radius:14px!important;}}
+[data-testid="stFileUploader"]:hover{{background:rgba(192,132,252,.05)!important;
+  border-color:rgba(192,132,252,.4)!important;}}
 
 /* ─ Tabs ─ */
 .stTabs [data-baseweb="tab-list"]{{background:rgba(18,24,38,.7)!important;
@@ -238,7 +238,7 @@ code,pre{{font-family:var(--mono)!important;background:rgba(124,156,255,.1)!impo
 .stTabs [data-baseweb="tab"]{{background:transparent!important;border-radius:8px 8px 0 0!important;
   color:{TF}!important;font-family:var(--font)!important;font-weight:500!important;font-size:.83rem!important;}}
 .stTabs [data-baseweb="tab"]:hover{{color:{PA}!important;}}
-.stTabs [aria-selected="true"]{{background:rgba(124,156,255,.12)!important;color:{PA}!important;font-weight:600!important;}}
+.stTabs [aria-selected="true"]{{background:rgba(192,132,252,.12)!important;color:{PA}!important;font-weight:600!important;}}
 .stTabs [data-baseweb="tab-panel"]{{background:rgba(18,24,38,.55)!important;backdrop-filter:blur(12px)!important;
   border:1px solid var(--bd)!important;border-top:none!important;
   border-radius:0 0 12px 12px!important;padding:20px!important;}}
@@ -252,7 +252,7 @@ code,pre{{font-family:var(--mono)!important;background:rgba(124,156,255,.1)!impo
 [data-testid="stExpander"]{{background:rgba(18,24,38,.55)!important;border:1px solid var(--bd)!important;
   border-radius:12px!important;overflow:hidden;}}
 .stProgress>div>div{{background:linear-gradient(90deg,{PA},{SA})!important;border-radius:99px!important;}}
-.stProgress{{background:rgba(124,156,255,.1)!important;border-radius:99px!important;}}
+.stProgress{{background:rgba(192,132,252,.1)!important;border-radius:99px!important;}}
 hr{{border:none!important;border-top:1px solid var(--bd)!important;margin:1.2rem 0!important;}}
 [data-testid="stChatMessage"]{{background:var(--glass)!important;border:1px solid var(--bd)!important;
   border-radius:14px!important;margin-bottom:8px!important;}}
@@ -269,8 +269,8 @@ hr{{border:none!important;border-top:1px solid var(--bd)!important;margin:1.2rem
 /* ─ Badges ─ */
 .badge{{display:inline-block;padding:2px 10px;border-radius:99px;
   font-size:.67rem;font-weight:600;letter-spacing:.4px;text-transform:uppercase;}}
-.bv{{background:rgba(124,156,255,.12);color:{PA};border:1px solid rgba(124,156,255,.25);}}
-.bs{{background:rgba(0,224,255,.1);color:{SA};border:1px solid rgba(0,224,255,.22);}}
+.bv{{background:rgba(192,132,252,.12);color:{PA};border:1px solid rgba(192,132,252,.25);}}
+.bs{{background:rgba(244,114,182,.1);color:{SA};border:1px solid rgba(244,114,182,.22);}}
 .bt{{background:rgba(103,232,249,.1);color:#67e8f9;border:1px solid rgba(103,232,249,.22);}}
 .ba{{background:rgba(255,209,102,.1);color:#ffd166;border:1px solid rgba(255,209,102,.22);}}
 .bp{{background:rgba(255,107,107,.1);color:#ff6b6b;border:1px solid rgba(255,107,107,.22);}}
@@ -281,8 +281,8 @@ hr{{border:none!important;border-top:1px solid var(--bd)!important;margin:1.2rem
 
 /* ─ Feature pill tags ─ */
 .pill{{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:99px;
-  font-size:.75rem;font-weight:500;background:rgba(124,156,255,.08);
-  border:1px solid rgba(124,156,255,.18);color:{TF};margin:2px;}}
+  font-size:.75rem;font-weight:500;background:rgba(192,132,252,.08);
+  border:1px solid rgba(192,132,252,.18);color:{TF};margin:2px;}}
 
 /* ─ Divider with label ─ */
 .divider{{display:flex;align-items:center;gap:12px;margin:20px 0;}}
@@ -292,8 +292,8 @@ hr{{border:none!important;border-top:1px solid var(--bd)!important;margin:1.2rem
 /* ─ Scrollbar ─ */
 ::-webkit-scrollbar{{width:5px;height:5px;}}
 ::-webkit-scrollbar-track{{background:transparent;}}
-::-webkit-scrollbar-thumb{{background:rgba(124,156,255,.2);border-radius:99px;}}
-::-webkit-scrollbar-thumb:hover{{background:rgba(124,156,255,.4);}}
+::-webkit-scrollbar-thumb{{background:rgba(192,132,252,.2);border-radius:99px;}}
+::-webkit-scrollbar-thumb:hover{{background:rgba(192,132,252,.4);}}
 
 /* ══ CRT SCANLINES ══ */
 .crt-overlay{{
@@ -343,7 +343,7 @@ hr{{border:none!important;border-top:1px solid var(--bd)!important;margin:1.2rem
   position:absolute;inset:0;
 }}
 .glitch::before{{
-  color:#00e0ff;
+  color:#f472b6;
   clip-path:polygon(0 30%,100% 30%,100% 50%,0 50%);
   animation:glitch-top 5s infinite;
   left:2px;
@@ -379,9 +379,9 @@ hr{{border:none!important;border-top:1px solid var(--bd)!important;margin:1.2rem
   position:sticky;top:0;z-index:9995;
   background:rgba(11,15,25,0.94);
   backdrop-filter:blur(28px) saturate(180%);
-  border-bottom:1px solid rgba(124,156,255,.12);
+  border-bottom:1px solid rgba(192,132,252,.12);
   margin:0 -2rem 1.6rem;
-  box-shadow:0 1px 0 rgba(124,156,255,.08),0 4px 30px rgba(0,0,0,.6);
+  box-shadow:0 1px 0 rgba(192,132,252,.08),0 4px 30px rgba(0,0,0,.6);
 }}
 .nav-inner{{
   max-width:1280px;margin:0 auto;
@@ -442,10 +442,10 @@ hr{{border:none!important;border-top:1px solid var(--bd)!important;margin:1.2rem
 }}
 .site-footer p{{
   font-family:'JetBrains Mono',monospace!important;
-  font-size:.72rem!important;color:rgba(124,156,255,.5)!important;
+  font-size:.72rem!important;color:rgba(192,132,252,.5)!important;
   letter-spacing:.5px!important;margin:3px 0!important;
 }}
-.site-footer a{{color:rgba(124,156,255,.6)!important;text-decoration:none!important;}}
+.site-footer a{{color:rgba(192,132,252,.6)!important;text-decoration:none!important;}}
 .site-footer a:hover{{color:{PA}!important;}}
 
 /* ══ DIFFICULTY BADGES ══ */
@@ -508,8 +508,8 @@ TABLES   = {"Standard (1)":1,"Vertebrate Mitochondrial (2)":2,"Bacterial/Archaea
             "Ciliate Nuclear (6)":6,"Echinoderm Mito (9)":9,"Euplotid Nuclear (10)":10}
 
 ACCENT = {
-    "violet": (PA, "rgba(124,156,255,.12)", "rgba(124,156,255,.2)", "rgba(124,156,255,.4)"),
-    "sky":    (SA, "rgba(0,224,255,.1)",    "rgba(0,224,255,.18)",  "rgba(0,224,255,.38)"),
+    "violet": (PA, "rgba(192,132,252,.12)", "rgba(192,132,252,.2)", "rgba(192,132,252,.4)"),
+    "sky":    (SA, "rgba(244,114,182,.1)",    "rgba(244,114,182,.18)",  "rgba(244,114,182,.38)"),
     "teal":   ("#67e8f9","rgba(103,232,249,.1)","rgba(103,232,249,.18)","rgba(103,232,249,.35)"),
     "amber":  ("#ffd166","rgba(255,209,102,.1)","rgba(255,209,102,.18)","rgba(255,209,102,.35)"),
     "pink":   ("#ff6b6b","rgba(255,107,107,.1)","rgba(255,107,107,.18)","rgba(255,107,107,.35)"),
@@ -622,9 +622,9 @@ let H = pc.height = window.innerHeight;
 let mx = W/2, my = H/2;
 
 const COLORS = [
-  'rgba(124,156,255,', 'rgba(0,224,255,',
-  'rgba(180,120,255,', 'rgba(255,107,200,',
-  'rgba(100,200,255,',
+  'rgba(192,132,252,', 'rgba(244,114,182,',
+  'rgba(220,80,200,', 'rgba(255,107,200,',
+  'rgba(255,140,220,',
 ];
 
 class Particle {
@@ -709,16 +709,16 @@ function flashLightning() {
     const ex = sx + (Math.random()-.5)*300;
     // glow pass
     lx.save();
-    lx.strokeStyle = 'rgba(180,140,255,.25)';
+    lx.strokeStyle = 'rgba(200,100,255,.25)';
     lx.lineWidth   = 6;
     lx.shadowBlur  = 30;
-    lx.shadowColor = '#7c9cff';
+    lx.shadowColor = '#c084fc';
     bolt(sx,0,ex,H*.7+Math.random()*H*.3,220,7,lx);
     // core pass
-    lx.strokeStyle = 'rgba(220,200,255,.9)';
+    lx.strokeStyle = 'rgba(255,200,240,.9)';
     lx.lineWidth   = 1;
     lx.shadowBlur  = 12;
-    lx.shadowColor = '#00e0ff';
+    lx.shadowColor = '#f472b6';
     bolt(sx,0,ex,H*.7+Math.random()*H*.3,220,7,lx);
     lx.restore();
   }
@@ -1148,18 +1148,18 @@ def protein_3d_viewer(pdb_id:str, height:int=500):
   *{{margin:0;padding:0;box-sizing:border-box;}}
   body{{background:#0b0f19;font-family:Inter,sans-serif;}}
   #v{{width:100%;height:{height}px;border-radius:14px;overflow:hidden;
-      box-shadow:0 4px 32px rgba(0,0,0,.6),0 0 40px rgba(124,156,255,.06);}}
+      box-shadow:0 4px 32px rgba(0,0,0,.6),0 0 40px rgba(192,132,252,.06);}}
   .ctrl{{position:absolute;top:10px;right:10px;z-index:10;display:flex;gap:5px;flex-wrap:wrap;}}
-  .b{{background:rgba(18,24,38,.9);border:1px solid rgba(124,156,255,.22);border-radius:7px;
-      padding:4px 11px;font-size:11px;font-weight:600;color:#7c9cff;cursor:pointer;
+  .b{{background:rgba(18,24,38,.9);border:1px solid rgba(192,132,252,.22);border-radius:7px;
+      padding:4px 11px;font-size:11px;font-weight:600;color:#c084fc;cursor:pointer;
       backdrop-filter:blur(10px);transition:all .15s;}}
-  .b:hover{{background:rgba(124,156,255,.18);color:#e6ecff;border-color:#7c9cff;}}
+  .b:hover{{background:rgba(192,132,252,.18);color:#e6ecff;border-color:#c084fc;}}
   .lbl{{position:absolute;bottom:10px;left:10px;background:rgba(18,24,38,.88);
         backdrop-filter:blur(10px);border-radius:9px;padding:5px 12px;
         font-size:12px;font-weight:600;color:#e6ecff;border:1px solid rgba(255,255,255,.08);}}
   .info{{position:absolute;bottom:10px;right:10px;background:rgba(18,24,38,.88);
          backdrop-filter:blur(10px);border-radius:9px;padding:5px 12px;
-         font-size:11px;color:#9aa4c7;border:1px solid rgba(255,255,255,.06);}}
+         font-size:11px;color:#b8a4d4;border:1px solid rgba(255,255,255,.06);}}
 </style></head><body>
 <div style="position:relative;">
   <div id="v"></div>
@@ -1280,13 +1280,13 @@ def render_seq_analysis(info):
                      labels={"x":"Position (bp)","y":"GC Skew"},
                      color_discrete_sequence=[PA])
         fg.add_hline(y=0,line_dash="dot",line_color=SA,opacity=.4)
-        fg.update_traces(line_width=1.6,fillcolor="rgba(124,156,255,.08)")
+        fg.update_traces(line_width=1.6,fillcolor="rgba(192,132,252,.08)")
         st.plotly_chart(th(fg,260), use_container_width=True)
 
     divider("Colourised Sequence Preview")
     st.markdown(
         f'<div class="seq-block">{colorize(info["seq"][:400])}'
-        f'{"<span style=\'color:#9aa4c7\'>  …</span>" if info["length"]>400 else ""}</div>',
+        f'{"<span style=\'color:#b8a4d4\'>  …</span>" if info["length"]>400 else ""}</div>',
         unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1535,7 +1535,7 @@ def page_seqana():
         st.markdown("""
         <div class="gc-sm">
         <b style="font-size:.85rem;color:#e6ecff;">This tool shows</b>
-        <ul style="font-size:.77rem;color:#9aa4c7;margin:8px 0 0;padding-left:15px;line-height:1.85;">
+        <ul style="font-size:.77rem;color:#b8a4d4;margin:8px 0 0;padding-left:15px;line-height:1.85;">
           <li>Auto-detects DNA / RNA / Protein</li>
           <li>Length &amp; molecular weight</li>
           <li>GC%, AT%, Melting temp (Tm)</li>
@@ -1688,7 +1688,7 @@ def page_gc():
         fs=px.area(x=po,y=sk,title="GC Skew",labels={"x":"Position (bp)","y":"(G-C)/(G+C)"},
                    color_discrete_sequence=[PA])
         fs.add_hline(y=0,line_dash="dot",line_color=SA,opacity=.4)
-        fs.update_traces(fillcolor="rgba(124,156,255,.08)",line_width=1.6)
+        fs.update_traces(fillcolor="rgba(192,132,252,.08)",line_width=1.6)
         st.plotly_chart(th(fs,340),use_container_width=True)
 
     if len(profiles)>1:
