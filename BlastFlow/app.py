@@ -48,19 +48,18 @@ warnings.filterwarnings("ignore")
 # ══════════════════════════════════════════════════════════════════════════════
 st.set_page_config(
     page_title="BlastFlow",
-    page_icon="⚡",
+    page_icon="🧬",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
 
 # Session init
-for k,v in [("page","blast"),("blast_results",None),("chat_history",[]),
-             ("history",[]),("bookmarks",[])]:
+for k,v in [("blast_results",None),("chat_history",[]),("history",[]),("bookmarks",[])]:
     if k not in st.session_state:
         st.session_state[k] = v
 
 def go(p):
-    st.session_state.page = p
+    st.query_params["p"] = p
     st.rerun()
 
 try:    GROQ_KEY = st.secrets["GROQ_API_KEY"]
@@ -102,124 +101,75 @@ html,body,[class*="css"],.stApp{{font-family:var(--font)!important;color:var(--t
 .main .block-container{{position:relative;z-index:1;}}
 
 /* ─ NAV ─ */
-.main .block-container{{padding-top:0!important;padding-left:1rem!important;padding-right:1rem!important;}}
+.main .block-container{{max-width:1280px!important;padding:0 1.2rem 5rem!important;}}
 
-/* Brand bar */
-.brand-bar{{
-  position:sticky;top:0;z-index:9992;
-  background:rgba(11,15,25,0.97);
-  backdrop-filter:blur(28px) saturate(180%);
-  border-bottom:1px solid rgba(192,132,252,.1);
-  margin:0 -1rem;
-  padding:10px 20px;
+/* ── BlastFlow nav ── */
+.bf-nav{{
+  position:sticky;top:0;z-index:9990;
+  background:rgba(11,15,25,.97);
+  backdrop-filter:blur(24px) saturate(180%);
+  border-bottom:1px solid rgba(192,132,252,.12);
+  margin:0 -1.2rem 1.6rem;
+}}
+.bf-top{{
   display:flex;align-items:center;gap:10px;
-  box-shadow:0 2px 24px rgba(0,0,0,.55);
+  padding:9px 18px;
 }}
-.brand-logo{{
-  font-size:1.05rem;font-weight:800;letter-spacing:-.3px;
-  display:flex;align-items:center;gap:6px;
-}}
-.brand-name{{
-  background:linear-gradient(90deg,{PA},{SA});
+.bf-logo{{
+  font-size:1rem;font-weight:800;letter-spacing:-.3px;
+  background:linear-gradient(90deg,#c084fc,#f472b6);
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  flex-shrink:0;
 }}
-.brand-sub{{
-  font-size:.68rem;color:rgba(192,132,252,.45);
-  font-family:'JetBrains Mono',monospace;letter-spacing:.3px;margin-left:2px;
+.bf-sub{{font-size:.62rem;color:rgba(192,132,252,.38);font-family:'JetBrains Mono',monospace;}}
+.bf-dot{{
+  width:6px;height:6px;border-radius:50%;background:#34d399;margin-left:auto;flex-shrink:0;
+  box-shadow:0 0 6px #34d399;animation:bf-pulse 2.2s ease-in-out infinite;
 }}
-.status-dot{{
-  width:6px;height:6px;border-radius:50%;margin-left:auto;flex-shrink:0;
-  background:#34d399;
-  box-shadow:0 0 5px #34d399,0 0 10px rgba(52,211,153,.4);
-  animation:pulse-dot 2.4s ease-in-out infinite;
+@keyframes bf-pulse{{0%,100%{{transform:scale(1);opacity:1;}}50%{{transform:scale(1.45);opacity:.6;}}}}
+.bf-tabs{{
+  display:flex;overflow-x:auto;-webkit-overflow-scrolling:touch;
+  scrollbar-width:none;border-top:1px solid rgba(255,255,255,.04);
 }}
-@keyframes pulse-dot{{
-  0%,100%{{transform:scale(1);opacity:1;}}
-  50%{{transform:scale(1.4);opacity:.65;}}
+.bf-tabs::-webkit-scrollbar{{display:none;}}
+.bf-tab{{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:2px;padding:8px 13px 6px;
+  color:#b8a4d4;cursor:pointer;text-decoration:none!important;
+  border:none;background:transparent;position:relative;flex-shrink:0;
+  transition:color .14s;-webkit-tap-highlight-color:transparent;
 }}
+.tab-icon{{font-size:.95rem;line-height:1;display:block;}}
+.tab-lbl{{font-size:.58rem;line-height:1;letter-spacing:.2px;display:block;white-space:nowrap;}}
+.bf-tab::after{{
+  content:'';position:absolute;bottom:0;left:50%;right:50%;height:2px;
+  background:linear-gradient(90deg,#c084fc,#f472b6);
+  border-radius:2px 2px 0 0;transition:left .18s,right .18s;box-shadow:0 0 6px #c084fc;
+}}
+.bf-tab:hover{{color:#e6ecff;}}
+.bf-tab:hover::after{{left:12%;right:12%;}}
+.bf-tab.active{{color:#c084fc;font-weight:700;}}
+.bf-tab.active::after{{left:0;right:0;}}
 
-/* Nav tab row */
-[data-testid="stHorizontalBlock"]:nth-of-type(2){{
-  position:sticky;top:46px;z-index:9991;
-  background:rgba(11,15,25,0.95);
-  backdrop-filter:blur(20px);
-  border-bottom:1px solid rgba(192,132,252,.1);
-  margin:0 -1rem 1.4rem!important;
-  padding:0!important;
-  overflow-x:auto;
-  -webkit-overflow-scrolling:touch;
-  scrollbar-width:none;
-  box-shadow:0 2px 16px rgba(0,0,0,.4);
-}}
-[data-testid="stHorizontalBlock"]:nth-of-type(2)::-webkit-scrollbar{{display:none;}}
-
-/* Tab buttons */
-[data-testid="stHorizontalBlock"]:nth-of-type(2) button{{
-  background:transparent!important;
-  border:none!important;
-  border-radius:0!important;
-  box-shadow:none!important;
-  color:#b8a4d4!important;
-  font-size:.72rem!important;
-  font-weight:500!important;
-  padding:10px 4px 8px!important;
-  min-width:64px!important;
-  line-height:1.3!important;
-  white-space:pre-line!important;
-  position:relative;
-  transition:color .15s!important;
-  transform:none!important;
-}}
-[data-testid="stHorizontalBlock"]:nth-of-type(2) button::after{{
-  content:'';
-  position:absolute;bottom:0;left:50%;right:50%;
-  height:2px;
-  background:linear-gradient(90deg,{PA},{SA});
-  transition:left .18s ease,right .18s ease;
-  border-radius:2px 2px 0 0;
-  box-shadow:0 0 8px {PA};
-}}
-[data-testid="stHorizontalBlock"]:nth-of-type(2) button:hover{{
-  color:#e6ecff!important;background:transparent!important;transform:none!important;
-}}
-[data-testid="stHorizontalBlock"]:nth-of-type(2) button:hover::after{{left:10%;right:10%;}}
-
-/* ─ Mobile responsive ─ */
-@media(max-width:640px){{
-  .main .block-container{{padding:0 .6rem 4rem!important;}}
-  .brand-bar{{padding:9px 14px;}}
-  .brand-sub{{display:none;}}
-  [data-testid="stHorizontalBlock"]:nth-of-type(2){{top:42px;}}
-  [data-testid="stHorizontalBlock"]:nth-of-type(2) button{{
-    font-size:.65rem!important;padding:8px 2px 6px!important;min-width:52px!important;
-  }}
-  /* Stack columns on mobile for forms */
-  section.main div[data-testid="column"]{{min-width:100%!important;}}
-  /* Larger touch targets */
-  .stButton>button{{padding:.6rem 1rem!important;font-size:.85rem!important;}}
-  /* Metric cards full width */
-  [data-testid="metric-container"]{{min-width:45%!important;}}
-  /* Reduce chart height on mobile */
-  .js-plotly-plot{{max-height:280px!important;}}
-  /* Seq block wraps nicely */
-  .seq-block{{font-size:.75rem!important;padding:10px 12px!important;}}
-  /* Section header smaller */
-  .sec-title{{font-size:1.2rem!important;}}
-  .sec-icon{{width:38px!important;height:38px!important;font-size:1.1rem!important;}}
-  /* Expanders full width */
-  [data-testid="stExpander"]{{margin:0 0 8px!important;}}
-  /* Tabs scroll on mobile */
-  .stTabs [data-baseweb="tab-list"]{{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap!important;}}
+/* ── Mobile ── */
+@media(max-width:600px){{
+  .main .block-container{{padding:0 .5rem 5rem!important;}}
+  .bf-nav{{margin:0 -.5rem 1.2rem;}}
+  .bf-sub{{display:none;}}
+  .bf-tab{{padding:7px 9px 5px;}}
+  .tab-lbl{{font-size:.52rem;}}
+  div[data-testid="column"]{{min-width:min(100%,280px)!important;}}
+  [data-testid="stMetricValue"]{{font-size:1.1rem!important;}}
+  .seq-block{{font-size:.7rem!important;padding:9px!important;}}
+  .sec-title{{font-size:1.05rem!important;}}
+  .sec-icon{{width:34px!important;height:34px!important;font-size:.95rem!important;}}
+  .stTabs [data-baseweb="tab-list"]{{flex-wrap:nowrap!important;overflow-x:auto;}}
   .stTabs [data-baseweb="tab"]{{white-space:nowrap;flex-shrink:0;}}
-  /* DataFrame scrollable */
   [data-testid="stDataFrame"]{{overflow-x:auto!important;}}
 }}
-
-@media(min-width:641px) and (max-width:1024px){{
-  .main .block-container{{padding:0 1.2rem 4rem!important;}}
-  [data-testid="stHorizontalBlock"]:nth-of-type(2) button{{
-    font-size:.75rem!important;padding:11px 5px 9px!important;
-  }}
+@media(min-width:601px) and (max-width:1024px){{
+  .main .block-container{{padding:0 1rem 5rem!important;}}
+  .bf-nav{{margin:0 -1rem 1.4rem;}}
 }}
 
 
@@ -767,32 +717,22 @@ window.addEventListener('resize', ()=>{
 
 
 def render_nav():
-    cur = st.session_state.page
-    # Logo row (mobile: full-width brand bar)
+    cur = st.query_params.get("p", "blast")
+    tabs = "".join(
+        f'<a class="bf-tab{"  active" if pid==cur else ""}" href="?p={pid}">'
+        f'<span class="tab-icon">{icon}</span><span class="tab-lbl">{label}</span></a>'
+        for pid, icon, label in NAV_ITEMS
+    )
     st.markdown(f"""
-    <div class="brand-bar">
-      <span class="brand-logo">⚡ <span class="brand-name">BlastFlow</span></span>
-      <span class="brand-sub">Bioinformatics Suite</span>
-      <span class="status-dot" title="NCBI live"></span>
+    <div class="bf-nav">
+      <div class="bf-top">
+        <span class="bf-logo">BlastFlow</span>
+        <span class="bf-sub">Bioinformatics Suite</span>
+        <span class="bf-dot" title="NCBI live"></span>
+      </div>
+      <div class="bf-tabs">{tabs}</div>
     </div>""", unsafe_allow_html=True)
-    # Nav buttons
-    cols = st.columns(len(NAV_ITEMS))
-    for col, (pid, icon, label) in zip(cols, NAV_ITEMS):
-        with col:
-            if cur == pid:
-                idx = NAV_ITEMS.index((pid, icon, label)) + 1
-                st.markdown(f"""<style>
-                [data-testid="stHorizontalBlock"]:nth-of-type(2)
-                div[data-testid="column"]:nth-child({idx}) button{{
-                  color:{PA}!important;font-weight:700!important;
-                }}
-                [data-testid="stHorizontalBlock"]:nth-of-type(2)
-                div[data-testid="column"]:nth-child({idx}) button::after{{
-                  left:0!important;right:0!important;
-                }}
-                </style>""", unsafe_allow_html=True)
-            if st.button(f"{icon}\n{label}", key=f"nb_{pid}", use_container_width=True):
-                go(pid)
+
 
 
 def render_footer():
@@ -1914,7 +1854,7 @@ def page_history():
 render_fx()
 render_nav()
 
-P = st.session_state.page
+P = st.query_params.get("p", "blast")
 if   P == "blast":   page_blast()
 elif P == "seqana":  page_seqana()
 elif P == "dogma":   page_dogma()
@@ -1924,6 +1864,8 @@ elif P == "phylo":   page_phylo()
 elif P == "prot3d":  page_prot3d()
 elif P == "ai":      page_ai()
 elif P == "history": page_history()
-else: go("blast")
+else:
+    st.query_params["p"] = "blast"
+    page_blast()
 
 render_footer()
