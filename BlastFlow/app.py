@@ -1,5 +1,5 @@
 """
-BLAST BioSuite Pro ─ Professional Bioinformatics Suite
+BlastFlow ─ Professional Bioinformatics Suite
 Run:   streamlit run app.py
 Requires: pip install streamlit biopython pandas numpy plotly matplotlib groq openpyxl
           GROQ_API_KEY in .streamlit/secrets.toml  (optional – enables AI features)
@@ -47,8 +47,8 @@ warnings.filterwarnings("ignore")
 # PAGE CONFIG
 # ══════════════════════════════════════════════════════════════════════════════
 st.set_page_config(
-    page_title="BLAST BioSuite Pro",
-    page_icon="🧬",
+    page_title="BlastFlow",
+    page_icon="⚡",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -102,52 +102,124 @@ html,body,[class*="css"],.stApp{{font-family:var(--font)!important;color:var(--t
 .main .block-container{{position:relative;z-index:1;}}
 
 /* ─ NAV ─ */
-.main .block-container{{padding-top:0!important;}}
+.main .block-container{{padding-top:0!important;padding-left:1rem!important;padding-right:1rem!important;}}
 
-/* The nav row container */
-[data-testid="stHorizontalBlock"]:first-of-type{{
-  position:sticky;top:0;z-index:9990;
-  background:rgba(11,15,25,0.95);
+/* Brand bar */
+.brand-bar{{
+  position:sticky;top:0;z-index:9992;
+  background:rgba(11,15,25,0.97);
   backdrop-filter:blur(28px) saturate(180%);
-  border-bottom:1px solid rgba(192,132,252,.12);
-  margin:0 -2rem 1.8rem!important;
-  padding:0 1rem!important;
-  box-shadow:0 1px 0 rgba(192,132,252,.08),0 4px 30px rgba(0,0,0,.6);
+  border-bottom:1px solid rgba(192,132,252,.1);
+  margin:0 -1rem;
+  padding:10px 20px;
+  display:flex;align-items:center;gap:10px;
+  box-shadow:0 2px 24px rgba(0,0,0,.55);
+}}
+.brand-logo{{
+  font-size:1.05rem;font-weight:800;letter-spacing:-.3px;
+  display:flex;align-items:center;gap:6px;
+}}
+.brand-name{{
+  background:linear-gradient(90deg,{PA},{SA});
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}}
+.brand-sub{{
+  font-size:.68rem;color:rgba(192,132,252,.45);
+  font-family:'JetBrains Mono',monospace;letter-spacing:.3px;margin-left:2px;
+}}
+.status-dot{{
+  width:6px;height:6px;border-radius:50%;margin-left:auto;flex-shrink:0;
+  background:#34d399;
+  box-shadow:0 0 5px #34d399,0 0 10px rgba(52,211,153,.4);
+  animation:pulse-dot 2.4s ease-in-out infinite;
+}}
+@keyframes pulse-dot{{
+  0%,100%{{transform:scale(1);opacity:1;}}
+  50%{{transform:scale(1.4);opacity:.65;}}
 }}
 
-/* Every button in that first row → plain text link */
-[data-testid="stHorizontalBlock"]:first-of-type button{{
+/* Nav tab row */
+[data-testid="stHorizontalBlock"]:nth-of-type(2){{
+  position:sticky;top:46px;z-index:9991;
+  background:rgba(11,15,25,0.95);
+  backdrop-filter:blur(20px);
+  border-bottom:1px solid rgba(192,132,252,.1);
+  margin:0 -1rem 1.4rem!important;
+  padding:0!important;
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
+  box-shadow:0 2px 16px rgba(0,0,0,.4);
+}}
+[data-testid="stHorizontalBlock"]:nth-of-type(2)::-webkit-scrollbar{{display:none;}}
+
+/* Tab buttons */
+[data-testid="stHorizontalBlock"]:nth-of-type(2) button{{
   background:transparent!important;
   border:none!important;
   border-radius:0!important;
   box-shadow:none!important;
   color:#b8a4d4!important;
-  font-size:.81rem!important;
+  font-size:.72rem!important;
   font-weight:500!important;
-  padding:14px 6px!important;
-  width:100%!important;
+  padding:10px 4px 8px!important;
+  min-width:64px!important;
+  line-height:1.3!important;
+  white-space:pre-line!important;
   position:relative;
   transition:color .15s!important;
   transform:none!important;
-  /* animated underline */
-  border-bottom:2px solid transparent!important;
 }}
-[data-testid="stHorizontalBlock"]:first-of-type button::after{{
+[data-testid="stHorizontalBlock"]:nth-of-type(2) button::after{{
   content:'';
-  position:absolute;bottom:-1px;left:50%;right:50%;
+  position:absolute;bottom:0;left:50%;right:50%;
   height:2px;
   background:linear-gradient(90deg,{PA},{SA});
-  transition:left .2s ease,right .2s ease;
-  border-radius:2px;
+  transition:left .18s ease,right .18s ease;
+  border-radius:2px 2px 0 0;
   box-shadow:0 0 8px {PA};
 }}
-[data-testid="stHorizontalBlock"]:first-of-type button:hover{{
-  color:#e6ecff!important;
-  background:transparent!important;
-  transform:none!important;
+[data-testid="stHorizontalBlock"]:nth-of-type(2) button:hover{{
+  color:#e6ecff!important;background:transparent!important;transform:none!important;
 }}
-[data-testid="stHorizontalBlock"]:first-of-type button:hover::after{{
-  left:5%;right:5%;
+[data-testid="stHorizontalBlock"]:nth-of-type(2) button:hover::after{{left:10%;right:10%;}}
+
+/* ─ Mobile responsive ─ */
+@media(max-width:640px){{
+  .main .block-container{{padding:0 .6rem 4rem!important;}}
+  .brand-bar{{padding:9px 14px;}}
+  .brand-sub{{display:none;}}
+  [data-testid="stHorizontalBlock"]:nth-of-type(2){{top:42px;}}
+  [data-testid="stHorizontalBlock"]:nth-of-type(2) button{{
+    font-size:.65rem!important;padding:8px 2px 6px!important;min-width:52px!important;
+  }}
+  /* Stack columns on mobile for forms */
+  section.main div[data-testid="column"]{{min-width:100%!important;}}
+  /* Larger touch targets */
+  .stButton>button{{padding:.6rem 1rem!important;font-size:.85rem!important;}}
+  /* Metric cards full width */
+  [data-testid="metric-container"]{{min-width:45%!important;}}
+  /* Reduce chart height on mobile */
+  .js-plotly-plot{{max-height:280px!important;}}
+  /* Seq block wraps nicely */
+  .seq-block{{font-size:.75rem!important;padding:10px 12px!important;}}
+  /* Section header smaller */
+  .sec-title{{font-size:1.2rem!important;}}
+  .sec-icon{{width:38px!important;height:38px!important;font-size:1.1rem!important;}}
+  /* Expanders full width */
+  [data-testid="stExpander"]{{margin:0 0 8px!important;}}
+  /* Tabs scroll on mobile */
+  .stTabs [data-baseweb="tab-list"]{{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap!important;}}
+  .stTabs [data-baseweb="tab"]{{white-space:nowrap;flex-shrink:0;}}
+  /* DataFrame scrollable */
+  [data-testid="stDataFrame"]{{overflow-x:auto!important;}}
+}}
+
+@media(min-width:641px) and (max-width:1024px){{
+  .main .block-container{{padding:0 1.2rem 4rem!important;}}
+  [data-testid="stHorizontalBlock"]:nth-of-type(2) button{{
+    font-size:.75rem!important;padding:11px 5px 9px!important;
+  }}
 }}
 
 
@@ -696,33 +768,37 @@ window.addEventListener('resize', ()=>{
 
 def render_nav():
     cur = st.session_state.page
+    # Logo row (mobile: full-width brand bar)
+    st.markdown(f"""
+    <div class="brand-bar">
+      <span class="brand-logo">⚡ <span class="brand-name">BlastFlow</span></span>
+      <span class="brand-sub">Bioinformatics Suite</span>
+      <span class="status-dot" title="NCBI live"></span>
+    </div>""", unsafe_allow_html=True)
+    # Nav buttons
     cols = st.columns(len(NAV_ITEMS))
     for col, (pid, icon, label) in zip(cols, NAV_ITEMS):
         with col:
             if cur == pid:
-                # active state — inject once per active item
-                st.markdown(f"""
-                <style>
-                [data-testid="stHorizontalBlock"]:first-of-type
-                div[data-testid="column"]:nth-child({NAV_ITEMS.index((pid,icon,label))+1})
-                button{{
+                idx = NAV_ITEMS.index((pid, icon, label)) + 1
+                st.markdown(f"""<style>
+                [data-testid="stHorizontalBlock"]:nth-of-type(2)
+                div[data-testid="column"]:nth-child({idx}) button{{
                   color:{PA}!important;font-weight:700!important;
-                  border-bottom:2px solid transparent!important;
                 }}
-                [data-testid="stHorizontalBlock"]:first-of-type
-                div[data-testid="column"]:nth-child({NAV_ITEMS.index((pid,icon,label))+1})
-                button::after{{
+                [data-testid="stHorizontalBlock"]:nth-of-type(2)
+                div[data-testid="column"]:nth-child({idx}) button::after{{
                   left:0!important;right:0!important;
                 }}
                 </style>""", unsafe_allow_html=True)
-            if st.button(f"{icon} {label}", key=f"nb_{pid}", use_container_width=True):
+            if st.button(f"{icon}\n{label}", key=f"nb_{pid}", use_container_width=True):
                 go(pid)
 
 
 def render_footer():
     st.markdown("""
     <div class="site-footer">
-      <p>BLAST BioSuite Pro &nbsp;·&nbsp; Powered by NCBI qBLAST &nbsp;·&nbsp; Biopython &nbsp;·&nbsp; Groq LLaMA 3</p>
+      <p>BlastFlow &nbsp;·&nbsp; Powered by NCBI qBLAST &nbsp;·&nbsp; Biopython &nbsp;·&nbsp; Groq LLaMA 3</p>
       <p style="margin-top:6px!important;">
         <a href="https://blast.ncbi.nlm.nih.gov" target="_blank">NCBI BLAST</a>
         &nbsp;·&nbsp;
