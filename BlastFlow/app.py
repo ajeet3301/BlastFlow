@@ -101,50 +101,56 @@ html,body,[class*="css"],.stApp{{font-family:var(--font)!important;color:var(--t
     radial-gradient(ellipse 30% 30% at 50% 55%,rgba(192,132,252,.025) 0%,transparent 65%);}}
 .main .block-container{{position:relative;z-index:1;}}
 
-/* ─ Nav bar wrapper ─ */
-.nav-wrap{{
-  position:sticky;top:0;z-index:999;
-  background:rgba(11,15,25,0.94);
-  backdrop-filter:blur(24px) saturate(160%);
-  border-bottom:1px solid {BD};
-  margin:0 -2rem 1.8rem;
-  padding:10px 2rem 10px;
-  display:flex;align-items:center;gap:16px;
-  box-shadow:0 2px 24px rgba(0,0,0,.55);
+/* ─ NAV ─ */
+.main .block-container{{padding-top:0!important;}}
+
+/* The nav row container */
+[data-testid="stHorizontalBlock"]:first-of-type{{
+  position:sticky;top:0;z-index:9990;
+  background:rgba(11,15,25,0.95);
+  backdrop-filter:blur(28px) saturate(180%);
+  border-bottom:1px solid rgba(192,132,252,.12);
+  margin:0 -2rem 1.8rem!important;
+  padding:0 1rem!important;
+  box-shadow:0 1px 0 rgba(192,132,252,.08),0 4px 30px rgba(0,0,0,.6);
 }}
-.nav-logo{{
-  font-weight:700;font-size:1rem;letter-spacing:-.2px;
-  white-space:nowrap;
-  background:linear-gradient(90deg,{PA},{SA});
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
-}}
-/* Style all nav buttons to look like tabs */
-.stHorizontalBlock [data-testid="column"] > div > div > div > div > button{{
+
+/* Every button in that first row → plain text link */
+[data-testid="stHorizontalBlock"]:first-of-type button{{
   background:transparent!important;
-  border:1px solid transparent!important;
-  border-radius:8px!important;
-  color:{TF}!important;
-  font-size:.82rem!important;
-  font-weight:500!important;
-  padding:6px 10px!important;
-  width:100%!important;
-  transition:all .15s!important;
+  border:none!important;
+  border-radius:0!important;
   box-shadow:none!important;
-  white-space:nowrap!important;
+  color:#b8a4d4!important;
+  font-size:.81rem!important;
+  font-weight:500!important;
+  padding:14px 6px!important;
+  width:100%!important;
+  position:relative;
+  transition:color .15s!important;
+  transform:none!important;
+  /* animated underline */
+  border-bottom:2px solid transparent!important;
 }}
-.stHorizontalBlock [data-testid="column"] > div > div > div > div > button:hover{{
-  background:rgba(192,132,252,.1)!important;
-  border-color:rgba(192,132,252,.2)!important;
-  color:{TM}!important;
+[data-testid="stHorizontalBlock"]:first-of-type button::after{{
+  content:'';
+  position:absolute;bottom:-1px;left:50%;right:50%;
+  height:2px;
+  background:linear-gradient(90deg,{PA},{SA});
+  transition:left .2s ease,right .2s ease;
+  border-radius:2px;
+  box-shadow:0 0 8px {PA};
+}}
+[data-testid="stHorizontalBlock"]:first-of-type button:hover{{
+  color:#e6ecff!important;
+  background:transparent!important;
   transform:none!important;
 }}
-/* Active nav button - applied via class on parent */
-[data-nav-active="true"] button{{
-  background:rgba(192,132,252,.15)!important;
-  border-color:rgba(192,132,252,.3)!important;
-  color:{PA}!important;
-  font-weight:600!important;
+[data-testid="stHorizontalBlock"]:first-of-type button:hover::after{{
+  left:5%;right:5%;
 }}
+
+
 
 /* ─ Section header ─ */
 .sec-header{{
@@ -374,65 +380,6 @@ hr{{border:none!important;border-top:1px solid var(--bd)!important;margin:1.2rem
   94%{{transform:none;opacity:0;}}
 }}
 
-/* ══ NAV — animated underline + status dot ══ */
-.nav-outer{{
-  position:sticky;top:0;z-index:9995;
-  background:rgba(11,15,25,0.94);
-  backdrop-filter:blur(28px) saturate(180%);
-  border-bottom:1px solid rgba(192,132,252,.12);
-  margin:0 -2rem 1.6rem;
-  box-shadow:0 1px 0 rgba(192,132,252,.08),0 4px 30px rgba(0,0,0,.6);
-}}
-.nav-inner{{
-  max-width:1280px;margin:0 auto;
-  padding:0 2rem;
-  display:flex;align-items:center;gap:0;
-}}
-.nav-brand{{
-  display:flex;align-items:center;gap:9px;
-  padding:14px 24px 14px 0;
-  border-right:1px solid rgba(255,255,255,.07);
-  margin-right:12px;flex-shrink:0;
-}}
-.nav-brand-text{{
-  font-weight:700;font-size:.95rem;letter-spacing:-.2px;
-  background:linear-gradient(90deg,{PA} 0%,{SA} 100%);
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
-}}
-.status-dot{{
-  width:7px;height:7px;border-radius:50%;
-  background:#34d399;
-  box-shadow:0 0 6px #34d399,0 0 12px rgba(52,211,153,.4);
-  animation:pulse-dot 2.4s ease-in-out infinite;flex-shrink:0;
-}}
-@keyframes pulse-dot{{
-  0%,100%{{transform:scale(1);opacity:1;}}
-  50%{{transform:scale(1.35);opacity:.7;}}
-}}
-.nav-links{{display:flex;align-items:stretch;flex:1;}}
-.nav-link{{
-  position:relative;
-  display:flex;align-items:center;gap:5px;
-  padding:14px 11px;
-  font-size:.81rem;font-weight:500;color:{TF};
-  cursor:pointer;white-space:nowrap;
-  border:none;background:none;
-  transition:color .15s;
-  text-decoration:none;
-}}
-.nav-link::after{{
-  content:'';
-  position:absolute;bottom:0;left:50%;right:50%;
-  height:2px;
-  background:linear-gradient(90deg,{PA},{SA});
-  border-radius:2px 2px 0 0;
-  transition:left .22s ease,right .22s ease;
-  box-shadow:0 0 8px {PA};
-}}
-.nav-link:hover{{color:{TM};}}
-.nav-link:hover::after{{left:8%;right:8%;}}
-.nav-link.active{{color:{PA};font-weight:700;}}
-.nav-link.active::after{{left:0;right:0;}}
 
 /* ══ FOOTER ══ */
 .site-footer{{
@@ -749,70 +696,27 @@ window.addEventListener('resize', ()=>{
 
 def render_nav():
     cur = st.session_state.page
-    # Build nav link items HTML
-    links_html = ""
-    for pid, icon, label in NAV_ITEMS:
-        active_cls = " active" if pid == cur else ""
-        links_html += f'<span class="nav-link{active_cls}" data-pid="{pid}">{icon} {label}</span>'
-
-    st.markdown(f"""
-    <div class="nav-outer">
-      <div class="nav-inner">
-        <div class="nav-brand">
-          <div class="status-dot" title="NCBI Connected"></div>
-          <span class="nav-brand-text">🧬 BLAST BioSuite Pro</span>
-        </div>
-        <nav class="nav-links" id="nav-links">{links_html}</nav>
-      </div>
-    </div>
-    <style>
-    /* ensure Streamlit block-container sits below nav */
-    .main .block-container{{padding-top:.5rem!important;}}
-    </style>
-    """, unsafe_allow_html=True)
-
-    # Real routing buttons — styled to match nav visually but kept visible
-    # They sit right under the nav bar inside a tight row
-    st.markdown("""
-    <style>
-    /* Nav routing row — make buttons visually identical to nav links */
-    div.nav-btn-row > div[data-testid="column"] > div > div > div > div > button {
-        background:transparent!important;
-        border:none!important;
-        border-radius:0!important;
-        color:transparent!important;
-        font-size:0!important;
-        padding:0!important;height:2px!important;
-        width:100%!important;
-        box-shadow:none!important;
-        cursor:pointer!important;
-        position:absolute!important;
-        opacity:0!important;
-        pointer-events:all!important;
-    }
-    div.nav-btn-row{position:relative;height:0;overflow:visible;}
-    /* Stretch invisible buttons to cover the visual nav links above */
-    div.nav-btn-row > div[data-testid="column"]{
-        position:relative;
-    }
-    div.nav-btn-row > div[data-testid="column"] > div > div > div > div > button{
-        position:absolute!important;
-        top:-56px!important;
-        left:0!important;right:0!important;
-        height:56px!important;
-        opacity:0!important;
-    }
-    </style>
-    <div class="nav-btn-row">
-    """, unsafe_allow_html=True)
-
     cols = st.columns(len(NAV_ITEMS))
     for col, (pid, icon, label) in zip(cols, NAV_ITEMS):
         with col:
+            if cur == pid:
+                # active state — inject once per active item
+                st.markdown(f"""
+                <style>
+                [data-testid="stHorizontalBlock"]:first-of-type
+                div[data-testid="column"]:nth-child({NAV_ITEMS.index((pid,icon,label))+1})
+                button{{
+                  color:{PA}!important;font-weight:700!important;
+                  border-bottom:2px solid transparent!important;
+                }}
+                [data-testid="stHorizontalBlock"]:first-of-type
+                div[data-testid="column"]:nth-child({NAV_ITEMS.index((pid,icon,label))+1})
+                button::after{{
+                  left:0!important;right:0!important;
+                }}
+                </style>""", unsafe_allow_html=True)
             if st.button(f"{icon} {label}", key=f"nb_{pid}", use_container_width=True):
                 go(pid)
-
-    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def render_footer():
